@@ -9,6 +9,9 @@ PyDistage provides a powerful, type-safe dependency injection framework with:
 - **DSL for defining bindings** - Fluent API for configuring dependencies
 - **Signature introspection** - Automatic extraction of dependency requirements from type hints
 - **Dependency graph formation and validation** - Build and validate the complete dependency graph at startup
+- **Roots for dependency tracing** - Specify what components should be instantiated
+- **Activations for configuration** - Choose between alternative implementations using configuration axes
+- **Garbage collection** - Only instantiate components reachable from roots
 - **Circular dependency detection** - Early detection of circular dependencies
 - **Missing dependency detection** - Ensure all required dependencies are available
 - **Tagged bindings** - Support for multiple implementations of the same interface
@@ -18,7 +21,7 @@ PyDistage provides a powerful, type-safe dependency injection framework with:
 ## Quick Start
 
 ```python
-from distage_py import ModuleDef, Injector, Tag
+from distage_py import ModuleDef, Injector, Roots, Activation, StandardAxis
 
 # Define your classes
 class Database:
@@ -28,6 +31,14 @@ class Database:
     def query(self, sql: str) -> str:
         return f"DB[{self.connection_string}]: {sql}"
 
+class ProdDatabase(Database):
+    def __init__(self):
+        super().__init__("postgresql://prod:5432/app")
+
+class TestDatabase(Database):
+    def __init__(self):
+        super().__init__("sqlite://memory")
+
 class UserService:
     def __init__(self, database: Database):
         self.database = database
@@ -35,19 +46,22 @@ class UserService:
     def create_user(self, name: str) -> str:
         return self.database.query(f"INSERT INTO users (name) VALUES ('{name}')")
 
-# Configure bindings
+# Configure bindings with activations
 module = ModuleDef()
-module.make(str).from_("postgresql://localhost:5432/mydb")  # Connection string
-module.make(Database).from_(Database)  # Database will get connection string injected
-module.make(UserService).from_(UserService)  # UserService will get Database injected
+module.make(Database).tagged(StandardAxis.Mode.Prod).from_(ProdDatabase)
+module.make(Database).tagged(StandardAxis.Mode.Test).from_(TestDatabase)
+module.make(UserService).from_(UserService)
 
-# Create injector and resolve dependencies
-injector = Injector(module)
+# Create injector with roots and activation
+roots = Roots.target(UserService)  # Only instantiate UserService and its dependencies
+activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Prod})
+
+injector = Injector(module, roots=roots, activation=activation)
 user_service = injector.get(UserService)
 
 # Use the service
 result = user_service.create_user("alice")
-print(result)  # DB[postgresql://localhost:5432/mydb]: INSERT INTO users (name) VALUES ('alice')
+print(result)  # DB[postgresql://prod:5432/app]: INSERT INTO users (name) VALUES ('alice')
 ```
 
 ## Core Concepts
@@ -109,23 +123,69 @@ except MissingBindingError as e:
     print(f"Missing dependency: {e}")
 ```
 
+### Roots - Dependency Tracing
+
+Roots define which components should be instantiated from your dependency graph, enabling garbage collection of unused bindings:
+
+```python
+from distage_py import Roots, DIKey
+
+# Target specific types as roots
+roots = Roots.target(UserService, Logger)
+
+# Include everything (no garbage collection)  
+roots = Roots.everything()
+
+# Create custom roots
+roots = Roots([DIKey.get(UserService), DIKey.get(Logger, tag)])
+```
+
+### Activations - Configuration Axes
+
+Activations allow choosing between different implementations using configuration axes:
+
+```python
+from distage_py import Activation, StandardAxis
+
+# Built-in axes
+activation = Activation({
+    StandardAxis.Mode: StandardAxis.Mode.Prod,    # Prod vs Test
+    StandardAxis.World: StandardAxis.World.Real,  # Real vs Mock
+    StandardAxis.Repo: StandardAxis.Repo.Prod     # Prod vs Dummy
+})
+
+# Custom axes
+class Priority(Axis):
+    class High(AxisChoiceDef):
+        def __init__(self): super().__init__("High")
+    class Low(AxisChoiceDef):
+        def __init__(self): super().__init__("Low")
+    
+    High, Low = High(), Low()
+
+module.make(Service).tagged(Priority.High).from_(HighPriorityService)
+module.make(Service).tagged(Priority.Low).from_(LowPriorityService)
+
+activation = Activation({Priority: Priority.High})
+```
+
 ### Advanced Features
 
 #### Tagged Bindings
 
-Use tags to distinguish between different implementations:
+Use activation tags to distinguish between different implementations:
 
 ```python
-prod_tag = Tag("prod")
-test_tag = Tag("test")
+from distage_py import StandardAxis
 
 module = ModuleDef()
-module.make(Database).tagged(prod_tag).from_(PostgresDB)
-module.make(Database).tagged(test_tag).from_(InMemoryDB)
+module.make(Database).tagged(StandardAxis.Mode.Prod).from_(PostgresDB)
+module.make(Database).tagged(StandardAxis.Mode.Test).from_(InMemoryDB)
 
-injector = Injector(module)
-prod_db = injector.get(Database, prod_tag)
-test_db = injector.get(Database, test_tag)
+# Activation selects which binding to use
+prod_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Prod})
+injector = Injector(module, activation=prod_activation)
+db = injector.get(Database)  # Will get PostgresDB
 ```
 
 #### Set Bindings
@@ -174,12 +234,16 @@ distage_py/
 
 ## Running Examples
 
-- **demo.py** - Comprehensive demonstration of all features
-- **test_distage.py** - Unit tests covering all functionality
+- **demo.py** - Basic demonstration of core features
+- **advanced_demo.py** - Advanced demonstration of roots and activations
+- **test_distage.py** - Unit tests covering basic functionality  
+- **test_advanced_distage.py** - Unit tests for roots and activations
 
 ```bash
-python demo.py          # Run the demo
-python test_distage.py   # Run unit tests
+python demo.py                    # Run basic demo
+python advanced_demo.py          # Run advanced demo with roots/activations  
+python test_distage.py           # Run basic tests
+python test_advanced_distage.py  # Run advanced tests
 ```
 
 ## Architecture

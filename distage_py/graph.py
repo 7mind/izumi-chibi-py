@@ -2,12 +2,15 @@
 Dependency graph formation and validation.
 """
 
-from typing import Dict, List, Set, Optional, Any
+from typing import Dict, List, Set, Optional, Any, TYPE_CHECKING
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
 from .bindings import Binding, BindingKey, BindingType
 from .introspection import SignatureIntrospector, DependencyInfo
+
+if TYPE_CHECKING:
+    from .activation import Activation
 
 
 class CircularDependencyError(Exception):
@@ -48,6 +51,7 @@ class DependencyGraph:
     
     def __init__(self):
         self._bindings: Dict[BindingKey, Binding] = {}
+        self._alternative_bindings: Dict[BindingKey, List[Binding]] = defaultdict(list)
         self._nodes: Dict[BindingKey, GraphNode] = {}
         self._set_bindings: Dict[BindingKey, List[Binding]] = defaultdict(list)
         self._validated = False
@@ -57,9 +61,12 @@ class DependencyGraph:
         if binding.binding_type == BindingType.SET_ELEMENT:
             self._set_bindings[binding.key].append(binding)
         else:
-            if binding.key in self._bindings:
-                raise ValueError(f"Duplicate binding for {binding.key}")
-            self._bindings[binding.key] = binding
+            # Store all bindings as alternatives initially
+            self._alternative_bindings[binding.key].append(binding)
+            
+            # If this is the first binding or an untagged binding, also store in main bindings
+            if binding.key not in self._bindings or not binding.activation_tags:
+                self._bindings[binding.key] = binding
         
         self._validated = False
     
@@ -199,3 +206,57 @@ class DependencyGraph:
             raise CircularDependencyError([])
         
         return result
+    
+    def filter_bindings_by_activation(self, activation: 'Activation') -> None:
+        """Filter bindings based on activation, selecting the best match for each key."""
+        # Import here to avoid circular import
+        from .activation import Activation
+        
+        filtered_bindings = {}
+        for key, alternatives in self._alternative_bindings.items():
+            # Find the best matching binding for this key
+            best_binding = self._select_best_binding(alternatives, activation)
+            if best_binding:
+                filtered_bindings[key] = best_binding
+        
+        self._bindings = filtered_bindings
+        self._validated = False
+    
+    def _select_best_binding(self, bindings: List[Binding], activation: 'Activation') -> Optional[Binding]:
+        """Select the best binding from alternatives based on activation."""
+        if not bindings:
+            return None
+        
+        if len(bindings) == 1:
+            return bindings[0]
+        
+        # Find bindings that match the activation
+        matching_bindings = [b for b in bindings if b.matches_activation(activation)]
+        
+        if not matching_bindings:
+            # If no bindings match, prefer untagged bindings as defaults
+            untagged_bindings = [b for b in bindings if not b.activation_tags]
+            return untagged_bindings[0] if untagged_bindings else None
+        
+        if len(matching_bindings) == 1:
+            return matching_bindings[0]
+        
+        # If multiple bindings match, prefer more specific ones (more tags)
+        matching_bindings.sort(key=lambda b: len(b.activation_tags), reverse=True)
+        return matching_bindings[0]
+    
+    def garbage_collect(self, reachable_keys: Set[BindingKey]) -> None:
+        """Remove unreachable bindings from the graph."""
+        # Filter main bindings
+        filtered_bindings = {key: binding for key, binding in self._bindings.items() 
+                           if key in reachable_keys}
+        
+        # Filter set bindings
+        filtered_set_bindings = {}
+        for key, bindings in self._set_bindings.items():
+            if key in reachable_keys:
+                filtered_set_bindings[key] = bindings
+        
+        self._bindings = filtered_bindings
+        self._set_bindings = filtered_set_bindings
+        self._validated = False

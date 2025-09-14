@@ -10,12 +10,18 @@ from .bindings import BindingKey, Binding, BindingType
 from .graph import DependencyGraph
 from .introspection import SignatureIntrospector
 
+if TYPE_CHECKING:
+    from .activation import Activation
+    from .roots import Roots
+
 
 class DependencyResolver:
     """Resolves dependencies and creates instances."""
     
-    def __init__(self, graph: DependencyGraph):
+    def __init__(self, graph: DependencyGraph, activation: Optional['Activation'] = None, roots: Optional['Roots'] = None):
         self._graph = graph
+        self._activation = activation
+        self._roots = roots
         self._instances: Dict[BindingKey, Any] = {}
         self._resolving: Set[BindingKey] = set()
     
