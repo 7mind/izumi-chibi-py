@@ -1,4 +1,20 @@
 {
   "include": ["src/izumi/distage/"],
-  "reportUnnecessaryTypeIgnoreComment": "none"
+
+  "exclude": [
+    "tests/",
+    "demo/",
+    "**/__pycache__",
+    "**/.*",
+    "build",
+    "dist",
+    ".cache",
+    "debug",
+    ".direnv/",
+    "scripts.py"
+  ],
+
+  "reportUnnecessaryTypeIgnoreComment": "none",
+  "useLibraryCodeForTypes": true,
+  "typeCheckingMode": "strict"
 }
