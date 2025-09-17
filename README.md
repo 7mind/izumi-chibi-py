@@ -1,5 +1,9 @@
 # Chibi Izumi
 
+[![CI](https://github.com/7mind/izumi-chibi-py/actions/workflows/ci.yml/badge.svg)](https://github.com/7mind/izumi-chibi-py/actions/workflows/ci.yml)
+[![PyPI version](https://badge.fury.io/py/chibi-izumi.svg)](https://badge.fury.io/py/chibi-izumi)
+[![codecov](https://codecov.io/gh/7mind/izumi-chibi-py/graph/badge.svg)](https://codecov.io/gh/7mind/izumi-chibi-py)
+
 A Python re-implementation of some core concepts from Scala's [Izumi Project](https://github.com/7mind/izumi),
 `distage` staged dependency injection library in particular.
 
@@ -288,6 +292,52 @@ processor = injector.get(planner_input, CommandProcessor)
 # processor.handlers contains instances of both UserHandler and AdminHandler
 ```
 
+### Activations for Configuration
+
+Activations provide a powerful mechanism to choose between alternative implementations based on configuration axes:
+
+```python
+from izumi.distage import ModuleDef, Injector, PlannerInput, Activation, StandardAxis
+
+# Define different implementations for different environments
+class Database:
+    def query(self, sql: str) -> str:
+        pass
+
+class PostgresDatabase(Database):
+    def __init__(self, connection_string: str):
+        self.connection_string = connection_string
+
+    def query(self, sql: str) -> str:
+        return f"Postgres[{self.connection_string}]: {sql}"
+
+class MockDatabase(Database):
+    def query(self, sql: str) -> str:
+        return f"Mock: {sql}"
+
+# Configure bindings with activations
+module = ModuleDef()
+
+# Database implementations based on environment
+module.make(str).using().value("postgresql://prod:5432/app")
+module.make(Database).tagged(StandardAxis.Mode.Prod).using().type(PostgresDatabase)
+module.make(Database).tagged(StandardAxis.Mode.Test).using().type(MockDatabase)
+
+# Create activations to select implementations
+prod_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Prod})
+test_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Test})
+
+injector = Injector()
+
+# Production setup
+prod_input = PlannerInput([module], activation=prod_activation)
+prod_db = injector.get(prod_input, Database)  # Gets PostgresDatabase
+
+# Test setup
+test_input = PlannerInput([module], activation=test_activation)
+test_db = injector.get(test_input, Database)  # Gets MockDatabase
+```
+
 ## Advanced Usage Patterns
 
 ### Multiple Execution Patterns
@@ -348,6 +398,32 @@ This is a working implementation with some simplifications compared to the full 
 - No advanced lifecycle management (startup/shutdown hooks)
 - Simplified error messages compared to Scala version
 - No compile-time dependency graph visualization tools
+
+## TODO: Future Features
+
+The following concepts from the original Scala distage library are planned for future implementation:
+
+### Framework - Roles and Flexible Monoliths
+
+The Framework module will provide:
+
+- **Role-based application structure** - Define application components as roles that can be started/stopped independently
+- **Flexible monoliths** - Run multiple roles in a single process or distribute them across processes
+- **Lifecycle management** - Automatic startup/shutdown hooks for resources
+- **Health checks** - Built-in health monitoring for roles
+- **Configuration integration** - Seamless integration with configuration management
+- **Resource management** - Proper cleanup of resources like database connections, file handles
+
+### Testkit - Testing Support
+
+The Testkit module will provide:
+
+- **Test fixtures integration** - Automatic setup/teardown of test dependencies
+- **Test-specific activations** - Easy switching between test and production implementations
+- **Mock injection** - Seamless replacement of dependencies with mocks
+- **Test isolation** - Each test gets its own isolated dependency graph
+- **Docker test containers** - Integration with testcontainers for integration tests
+- **Parallel test execution** - Safe concurrent test execution with isolated contexts
 
 ## Contributing
 
