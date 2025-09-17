@@ -5,6 +5,7 @@ Injector - Stateless dependency injection container that produces Plans from Pla
 from __future__ import annotations
 
 import inspect
+import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
 
@@ -14,6 +15,7 @@ from .implementation import ImplClass, ImplFunc, ImplSetElement, ImplValue
 from .introspection import SignatureIntrospector
 from .keys import DIKey, SetElementKey
 from .locator import Locator
+from .logger_injection import AutoLoggerManager
 from .plan import Plan
 from .planner_input import PlannerInput
 
@@ -136,6 +138,8 @@ class Injector:
             for binding in module.bindings:
                 graph.add_binding(binding)
 
+        # Note: Automatic logger injection is handled directly in _instantiate_class and _call_factory
+
         # Filter bindings based on activation
         if not input.activation.choices:
             # No activation specified, keep all bindings
@@ -240,7 +244,18 @@ class Injector:
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
                 dep_key = DIKey(dep.type_hint, dep.dependency_name)
-                kwargs[dep.name] = resolve_fn(dep_key)
+
+                # Special handling for automatic logger injection
+                if AutoLoggerManager.should_auto_inject_logger(dep_key):
+                    # First try to resolve through normal DI, fallback to auto-injection
+                    try:
+                        kwargs[dep.name] = resolve_fn(dep_key)
+                    except ValueError:
+                        # Create a class-specific logger as fallback
+                        logger_name = f"{cls.__module__}.{cls.__name__}"
+                        kwargs[dep.name] = logging.getLogger(logger_name)
+                else:
+                    kwargs[dep.name] = resolve_fn(dep_key)
             # For optional dependencies with defaults, let the class handle them
 
         return cls(**kwargs)
@@ -261,7 +276,18 @@ class Injector:
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
                 dep_key = DIKey(dep.type_hint, dep.dependency_name)
-                kwargs[dep.name] = resolve_fn(dep_key)
+
+                # Special handling for automatic logger injection
+                if AutoLoggerManager.should_auto_inject_logger(dep_key):
+                    # First try to resolve through normal DI, fallback to auto-injection
+                    try:
+                        kwargs[dep.name] = resolve_fn(dep_key)
+                    except ValueError:
+                        # For factory functions, use the function name
+                        logger_name = f"{factory.__module__}.{factory.__name__}"
+                        kwargs[dep.name] = logging.getLogger(logger_name)
+                else:
+                    kwargs[dep.name] = resolve_fn(dep_key)
             # For optional dependencies with defaults, let the factory handle them
 
         return factory(**kwargs)

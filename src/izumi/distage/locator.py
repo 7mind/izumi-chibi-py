@@ -51,7 +51,21 @@ class Locator:
         if key not in self._instances:
             # Try to resolve it on-demand
             if not self._plan.has_binding(key):
-                raise ValueError(f"No binding found for {key}")
+                # Check if this is an auto-injectable logger
+                from .logger_injection import AutoLoggerManager
+
+                if AutoLoggerManager.should_auto_inject_logger(key):
+                    # Create a generic logger using stack introspection
+                    import logging
+
+                    from .logger_injection import LoggerLocationIntrospector
+
+                    location_name = LoggerLocationIntrospector.get_logger_location_name()
+                    logger = logging.getLogger(location_name)
+                    self._instances[key] = logger
+                    return logger  # type: ignore[return-value]
+                else:
+                    raise ValueError(f"No binding found for {key}")
 
             # Import here to avoid circular import
             from .resolver import DependencyResolver

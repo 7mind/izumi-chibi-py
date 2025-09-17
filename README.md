@@ -1,7 +1,7 @@
 # Chibi Izumi
 
 A Python re-implementation of some core concepts from Scala's [Izumi Project](https://github.com/7mind/izumi),
-`distage` dependency injection library in particular.
+`distage` staged dependency injection library in particular.
 
 The port was done by guiding Claude with thorough manual reviews.
 

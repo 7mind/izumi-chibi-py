@@ -163,6 +163,12 @@ class DependencyGraph:
         for node in self._nodes.values():
             for dep_key in node.dependencies:
                 if dep_key not in self._bindings and dep_key not in self._set_bindings:
+                    # Check if this is an auto-injectable logger
+                    from .logger_injection import AutoLoggerManager
+
+                    if AutoLoggerManager.should_auto_inject_logger(dep_key):
+                        # Skip validation for auto-injectable loggers
+                        continue
                     raise MissingBindingError(dep_key, node.key)
 
     def _check_circular_dependencies(self) -> None:
