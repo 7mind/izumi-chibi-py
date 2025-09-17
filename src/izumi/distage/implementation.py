@@ -72,6 +72,20 @@ class ImplSetElement(Implementation):
         return f"ImplSetElement({self.impl!r})"
 
 
+class ImplFactory(Implementation):
+    """Implementation for Factory[T] bindings."""
+
+    def __init__(self, target_type: type):
+        self.target_type = target_type
+
+    def get_value(self) -> type:
+        """Return the target type for factory creation."""
+        return self.target_type
+
+    def __repr__(self) -> str:
+        return f"ImplFactory({self.target_type.__name__})"
+
+
 class UsingBuilder[T]:
     """Builder for creating implementations with a fluent API."""
 
@@ -92,4 +106,9 @@ class UsingBuilder[T]:
     def func(self, factory: Callable[..., T]) -> None:
         """Bind to a factory function."""
         impl = ImplFunc(factory)
+        self._finalize_callback(impl)
+
+    def factory(self, target_type: type[T]) -> None:  # type: ignore[valid-type]
+        """Bind to a Factory[T] that creates instances on-demand."""
+        impl = ImplFactory(target_type)
         self._finalize_callback(impl)

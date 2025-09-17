@@ -11,7 +11,7 @@ from typing import Any, TypeVar
 
 from .bindings import Binding
 from .graph import DependencyGraph
-from .implementation import ImplClass, ImplFunc, ImplSetElement, ImplValue
+from .implementation import ImplClass, ImplFactory, ImplFunc, ImplSetElement, ImplValue
 from .introspection import SignatureIntrospector
 from .keys import DIKey, SetElementKey
 from .locator import Locator
@@ -110,7 +110,7 @@ class Injector:
 
         return Locator(plan, instances)
 
-    def get(self, input: PlannerInput, target_type: type[T], name: str | None = None) -> T:
+    def get(self, input: PlannerInput, target_type: type[T] | Any, name: str | None = None) -> T:
         """
         Convenience method to resolve a single type.
 
@@ -127,7 +127,7 @@ class Injector:
         """
         plan = self.plan(input)
         locator = self.produce(plan)
-        return locator.get(target_type, name)
+        return locator.get(target_type, name)  # type: ignore[no-any-return]
 
     def _build_graph(self, input: PlannerInput) -> DependencyGraph:
         """Build the dependency graph from PlannerInput."""
@@ -223,6 +223,9 @@ class Injector:
                 element_key = binding.key
             # Delegate to the wrapped implementation
             return self._create_from_binding(Binding(element_key, impl.impl), resolve_fn)
+        elif isinstance(impl, ImplFactory):
+            # For factory bindings, create a Factory[T] instance
+            return self._create_factory(impl.target_type, resolve_fn)
         else:
             raise ValueError(f"Unknown implementation type: {type(impl)}")
 
@@ -291,3 +294,19 @@ class Injector:
             # For optional dependencies with defaults, let the factory handle them
 
         return factory(**kwargs)
+
+    def _create_factory(self, target_type: type, resolve_fn: Callable[[DIKey], Any]) -> Any:
+        """Create a Factory[T] instance for the given target type."""
+        from .factory import Factory
+
+        # Create a locator-like object that uses the resolve_fn
+        class ResolverLocator:
+            def __init__(self, resolve_fn: Callable[[DIKey], Any]):
+                self._resolve_fn = resolve_fn
+
+            def get(self, target_type: type, name: str | None = None) -> Any:
+                key = DIKey(target_type, name)
+                return self._resolve_fn(key)
+
+        locator = ResolverLocator(resolve_fn)
+        return Factory(target_type, locator)  # pyright: ignore[reportUnknownVariableType]

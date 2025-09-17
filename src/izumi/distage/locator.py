@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Callable
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from .keys import DIKey
 from .plan import Plan
@@ -33,7 +33,7 @@ class Locator:
         self._plan = plan
         self._instances: dict[DIKey, object] = instances or {}
 
-    def get(self, target_type: type[T], name: str | None = None) -> T:
+    def get(self, target_type: type[T] | Any, name: str | None = None) -> T:
         """
         Get an instance of the given type, resolving it if not already resolved.
 

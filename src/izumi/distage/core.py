@@ -44,7 +44,7 @@ class ModuleDef:
         new_bindings = self.bindings + [binding]
         object.__setattr__(self, "bindings", new_bindings)
 
-    def make(self, target_type: type[T]) -> BindingBuilder[T]:
+    def make(self, target_type: type[T] | Any) -> BindingBuilder[T]:
         """Create a binding builder for the given type."""
         return BindingBuilder(target_type, self)
 
@@ -56,7 +56,7 @@ class ModuleDef:
 class BindingBuilder[T]:
     """Builder for creating bindings."""
 
-    def __init__(self, target_type: type[T], module: ModuleDef):
+    def __init__(self, target_type: type[T] | Any, module: ModuleDef):
         self._target_type = target_type
         self._module = module
         self._name: str | None = None

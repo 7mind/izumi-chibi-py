@@ -17,6 +17,7 @@ from beartype.roar import BeartypeCallHintViolation
 from .activation import Activation, AxisChoiceDef, StandardAxis
 from .bindings import Binding
 from .core import ModuleDef
+from .factory import Factory
 from .graph import DependencyGraph
 from .injector import Injector
 from .keys import DIKey, Id
@@ -73,4 +74,5 @@ __all__ = [
     "Activation",
     "StandardAxis",
     "AxisChoiceDef",
+    "Factory",
 ]
