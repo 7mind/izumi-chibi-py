@@ -45,3 +45,17 @@ class DIKey:
 
     def __hash__(self) -> int:
         return hash((self.target_type, self.name))
+
+
+@dataclass(frozen=True)
+class SetElementKey:
+    """A key that identifies a specific element within a set binding."""
+
+    set_key: DIKey
+    element_key: DIKey
+
+    def __str__(self) -> str:
+        return f"{self.set_key}[{self.element_key}]"
+
+    def __hash__(self) -> int:
+        return hash((self.set_key, self.element_key))

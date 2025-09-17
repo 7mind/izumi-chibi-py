@@ -145,8 +145,8 @@ def main():
     prod_module.make(UserService).using().type(UserService)
 
     # Set bindings for commands
-    prod_module.many(Command).add(StartCommand)
-    prod_module.many(Command).add(StatusCommand)
+    prod_module.many(Command).add_type(StartCommand)
+    prod_module.many(Command).add_type(StatusCommand)
     prod_module.make(CommandExecutor).using().type(CommandExecutor)
 
     # Test module (adds additional bindings)
