@@ -212,7 +212,8 @@ def main():
 
     try:
         injector = Injector()
-        PlannerInput([circular_module])
+        planner_input = PlannerInput([circular_module])
+        injector.plan(planner_input)  # This triggers validation
         print(
             "This shouldn't print - circular dependency should be caught during graph construction"
         )
@@ -234,7 +235,8 @@ def main():
 
     try:
         injector = Injector()
-        PlannerInput([incomplete_module])
+        planner_input = PlannerInput([incomplete_module])
+        injector.plan(planner_input)  # This triggers validation
         print(
             "This shouldn't print - missing dependency should be caught during graph construction"
         )

@@ -11,9 +11,12 @@ At this point the project is not battle-tested. Expect dragons, landmines and va
 
 `distage` provides a powerful, type-safe dependency injection framework with:
 
-- **DSL for defining bindings** - Fluent API for configuring dependencies
+- **Fluent DSL for defining bindings** - Type-safe API with `.using().value()/.type()/.func()/.factory()`
 - **Signature introspection** - Automatic extraction of dependency requirements from type hints
 - **Dependency graph formation and validation** - Build and validate the complete dependency graph at startup
+- **Automatic logger injection** - Seamless injection of location-based loggers without manual setup
+- **Factory bindings** - Create new instances on-demand with assisted injection (`Factory[T]`)
+- **Named dependencies** - Distinguished dependencies using `@Id` annotations
 - **Roots for dependency tracing** - Specify what components should be instantiated
 - **Activations for configuration** - Choose between alternative implementations using configuration axes
 - **Garbage collection** - Only instantiate components reachable from roots
@@ -21,48 +24,37 @@ At this point the project is not battle-tested. Expect dragons, landmines and va
 - **Missing dependency detection** - Ensure all required dependencies are available
 - **Tagged bindings** - Support for multiple implementations of the same interface
 - **Set bindings** - Collect multiple implementations into sets
-- **Factory functions** - Support for factory-based object creation
 
 ## Quick Start
 
 ```python
-from distage_py import ModuleDef, Injector, Roots, Activation, StandardAxis
+from izumi.distage import ModuleDef, Injector, PlannerInput
 
 # Define your classes
 class Database:
     def __init__(self, connection_string: str):
         self.connection_string = connection_string
-    
+
     def query(self, sql: str) -> str:
         return f"DB[{self.connection_string}]: {sql}"
-
-class ProdDatabase(Database):
-    def __init__(self):
-        super().__init__("postgresql://prod:5432/app")
-
-class TestDatabase(Database):
-    def __init__(self):
-        super().__init__("sqlite://memory")
 
 class UserService:
     def __init__(self, database: Database):
         self.database = database
-    
+
     def create_user(self, name: str) -> str:
         return self.database.query(f"INSERT INTO users (name) VALUES ('{name}')")
 
-# Configure bindings with activations
+# Configure bindings using the new fluent API
 module = ModuleDef()
-module.make(Database).tagged(StandardAxis.Mode.Prod).from_(ProdDatabase)
-module.make(Database).tagged(StandardAxis.Mode.Test).from_(TestDatabase)
-module.make(UserService).from_(UserService)
+module.make(str).using().value("postgresql://prod:5432/app")
+module.make(Database).using().type(Database)  # Constructor injection
+module.make(UserService).using().type(UserService)
 
-# Create injector with roots and activation
-roots = Roots.target(UserService)  # Only instantiate UserService and its dependencies
-activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Prod})
-
-injector = Injector(module, roots=roots, activation=activation)
-user_service = injector.get(UserService)
+# Create injector and get service
+injector = Injector()
+planner_input = PlannerInput([module])
+user_service = injector.get(planner_input, UserService)
 
 # Use the service
 result = user_service.create_user("alice")
@@ -73,132 +65,200 @@ print(result)  # DB[postgresql://prod:5432/app]: INSERT INTO users (name) VALUES
 
 ### ModuleDef - Binding Definition DSL
 
-The `ModuleDef` class provides a fluent DSL for defining dependency bindings:
+The `ModuleDef` class provides a fluent DSL for defining dependency bindings using the new algebraic data structure approach:
 
 ```python
+from izumi.distage import ModuleDef, Factory
+
+# Example classes for demonstration
+class Config:
+    def __init__(self, debug: bool = False, db_url: str = ""):
+        self.debug = debug
+        self.db_url = db_url
+
+class Database:
+    def __init__(self, connection_string: str):
+        self.connection_string = connection_string
+
+class PostgresDatabase(Database):
+    def __init__(self, connection_string: str):
+        super().__init__(connection_string)
+
+class UserService:
+    def __init__(self, database: Database):
+        self.database = database
+
+class Handler:
+    def handle(self):
+        pass
+
+class UserHandler(Handler):
+    def handle(self):
+        return "user"
+
+class AdminHandler(Handler):
+    def handle(self):
+        return "admin"
+
+# Now define the bindings
 module = ModuleDef()
 
-# Class binding
-module.make(Service).from_(ServiceImpl)
+# Instance binding
+module.make(Config).using().value(Config(debug=True))
 
-# Instance binding  
-module.make(Config).from_(Config(debug=True))
+# Class binding (constructor injection)
+module.make(Database).using().type(PostgresDatabase)
 
 # Factory function binding
-module.make(Database).from_(lambda config: create_database(config.db_url))
+def create_database(config: Config) -> Database:
+    return Database(config.db_url)
 
-# Tagged bindings for multiple implementations
-prod_tag = Tag("prod")
-test_tag = Tag("test")
-module.make(Database).tagged(prod_tag).from_(PostgresDatabase)
-module.make(Database).tagged(test_tag).from_(InMemoryDatabase)
+module.make(Database).named("custom").using().func(create_database)
+
+# Factory bindings for non-singleton semantics
+module.make(Factory[UserService]).using().factory(UserService)
+
+# Named bindings for multiple instances
+module.make(str).named("db-url").using().value("postgresql://prod:5432/app")
+module.make(str).named("api-key").using().value("secret-key-123")
 
 # Set bindings for collecting multiple implementations
-module.many(Handler).add(UserHandler).add(AdminHandler)
+module.many(Handler).add_type(UserHandler)
+module.many(Handler).add_type(AdminHandler)
 ```
 
-### Signature Introspection
+### Automatic Logger Injection
 
-Chibi Izumi automatically analyzes constructor signatures and type hints to determine dependencies:
+Chibi Izumi automatically provides loggers for dependencies without names, creating location-specific logger instances:
 
 ```python
+import logging
+from izumi.distage import ModuleDef, Injector, PlannerInput
+
+class Database:
+    def __init__(self, connection_string: str):
+        self.connection_string = connection_string
+
+    def query(self, sql: str) -> str:
+        return f"DB[{self.connection_string}]: {sql}"
+
 class UserService:
-    def __init__(self, database: Database, logger: Logger, config: Optional[Config] = None):
-        # database and logger will be injected
-        # config is optional and will use default if no binding exists
-        pass
+    # Logger automatically injected based on class location
+    def __init__(self, database: Database, logger: logging.Logger):
+        self.database = database
+        self.logger = logger  # Will be logging.getLogger("__main__.UserService")
+
+    def create_user(self, name: str) -> str:
+        self.logger.info(f"Creating user: {name}")
+        return self.database.query(f"INSERT INTO users (name) VALUES ('{name}')")
+
+# No need to configure loggers - they're injected automatically!
+module = ModuleDef()
+module.make(str).using().value("postgresql://prod:5432/app")
+module.make(Database).using().type(Database)
+module.make(UserService).using().type(UserService)
+
+injector = Injector()
+planner_input = PlannerInput([module])
+user_service = injector.get(planner_input, UserService)
 ```
 
-The introspection system handles:
-- Required dependencies (no default value)
-- Optional dependencies (with default values)
-- Type hints and forward references
-- Dataclass field analysis
+### Factory Bindings for Non-Singleton Semantics
+
+Use `Factory[T]` when you need to create multiple instances with assisted injection:
+
+```python
+from typing import Annotated
+from izumi.distage import Factory, Id, ModuleDef, Injector, PlannerInput
+
+class Database:
+    def __init__(self, connection_string: str):
+        self.connection_string = connection_string
+
+class UserSession:
+    def __init__(self, database: Database, user_id: str, api_key: Annotated[str, Id("api-key")]):
+        self.database = database
+        self.user_id = user_id
+        self.api_key = api_key
+
+module = ModuleDef()
+module.make(str).using().value("postgresql://prod:5432/app")
+module.make(Database).using().type(Database)
+module.make(Factory[UserSession]).using().factory(UserSession)
+
+injector = Injector()
+planner_input = PlannerInput([module])
+factory = injector.get(planner_input, Factory[UserSession])
+
+# Create new instances with runtime parameters
+session1 = factory.create("user123", **{"api-key": "secret1"})
+session2 = factory.create("user456", **{"api-key": "secret2"})
+# Database is injected from DI, user_id and api_key are provided at creation time
+```
+
+### Named Dependencies with @Id
+
+Use `@Id` annotations to distinguish between multiple bindings of the same type:
+
+```python
+from typing import Annotated
+from izumi.distage import Id, ModuleDef, Injector, PlannerInput
+
+class DatabaseService:
+    def __init__(
+        self,
+        primary_db: Annotated[str, Id("primary-db")],
+        replica_db: Annotated[str, Id("replica-db")]
+    ):
+        self.primary_db = primary_db
+        self.replica_db = replica_db
+
+module = ModuleDef()
+module.make(str).named("primary-db").using().value("postgresql://primary:5432/app")
+module.make(str).named("replica-db").using().value("postgresql://replica:5432/app")
+module.make(DatabaseService).using().type(DatabaseService)
+
+injector = Injector()
+planner_input = PlannerInput([module])
+db_service = injector.get(planner_input, DatabaseService)
+```
 
 ### Dependency Graph Validation
 
-The dependency graph is built and validated when the `Injector` is created:
+The dependency graph is built and validated when creating a plan:
 
 ```python
-try:
-    injector = Injector(module)
-except CircularDependencyError as e:
-    print(f"Circular dependency detected: {e}")
-except MissingBindingError as e:
-    print(f"Missing dependency: {e}")
-```
+from izumi.distage import ModuleDef, Injector, PlannerInput
 
-### Roots - Dependency Tracing
+class A:
+    def __init__(self, b: "B"):
+        self.b = b
 
-Roots define which components should be instantiated from your dependency graph, enabling garbage collection of unused bindings:
+class B:
+    def __init__(self, a: A):
+        self.a = a
 
-```python
-from distage_py import Roots, DIKey
-
-# Target specific types as roots
-roots = Roots.target(UserService, Logger)
-
-# Include everything (no garbage collection)  
-roots = Roots.everything()
-
-# Create custom roots
-roots = Roots([DIKey.get(UserService), DIKey.get(Logger, tag)])
-```
-
-### Activations - Configuration Axes
-
-Activations allow choosing between different implementations using configuration axes:
-
-```python
-from distage_py import Activation, StandardAxis
-
-# Built-in axes
-activation = Activation({
-    StandardAxis.Mode: StandardAxis.Mode.Prod,    # Prod vs Test
-    StandardAxis.World: StandardAxis.World.Real,  # Real vs Mock
-    StandardAxis.Repo: StandardAxis.Repo.Prod     # Prod vs Dummy
-})
-
-# Custom axes
-class Priority(Axis):
-    class High(AxisChoiceDef):
-        def __init__(self): super().__init__("High")
-    class Low(AxisChoiceDef):
-        def __init__(self): super().__init__("Low")
-    
-    High, Low = High(), Low()
-
-module.make(Service).tagged(Priority.High).from_(HighPriorityService)
-module.make(Service).tagged(Priority.Low).from_(LowPriorityService)
-
-activation = Activation({Priority: Priority.High})
-```
-
-### Advanced Features
-
-#### Tagged Bindings
-
-Use activation tags to distinguish between different implementations:
-
-```python
-from distage_py import StandardAxis
-
+# This will detect circular dependencies
 module = ModuleDef()
-module.make(Database).tagged(StandardAxis.Mode.Prod).from_(PostgresDB)
-module.make(Database).tagged(StandardAxis.Mode.Test).from_(InMemoryDB)
+module.make(A).using().type(A)
+module.make(B).using().type(B)
 
-# Activation selects which binding to use
-prod_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Prod})
-injector = Injector(module, activation=prod_activation)
-db = injector.get(Database)  # Will get PostgresDB
+try:
+    injector = Injector()
+    planner_input = PlannerInput([module])
+    plan = injector.plan(planner_input)  # Validation happens here
+    print("This should not print - circular dependency should be caught")
+except Exception as e:
+    # Catches circular dependencies, missing dependencies, etc.
+    pass  # Expected to happen
 ```
 
-#### Set Bindings
+### Set Bindings
 
 Collect multiple implementations into a set:
 
 ```python
-from typing import Set
+from izumi.distage import ModuleDef, Injector, PlannerInput
 
 class CommandHandler:
     def handle(self, cmd: str) -> str:
@@ -213,32 +273,80 @@ class AdminHandler(CommandHandler):
         return f"Admin: {cmd}"
 
 class CommandProcessor:
-    def __init__(self, handlers: Set[CommandHandler]):
+    def __init__(self, handlers: set[CommandHandler]):
         self.handlers = handlers
 
 module = ModuleDef()
-module.many(CommandHandler).add(UserHandler).add(AdminHandler)
-module.make(CommandProcessor).from_(CommandProcessor)
+module.many(CommandHandler).add_type(UserHandler)
+module.many(CommandHandler).add_type(AdminHandler)
+module.make(CommandProcessor).using().type(CommandProcessor)
 
-injector = Injector(module)
-processor = injector.get(CommandProcessor)
+injector = Injector()
+planner_input = PlannerInput([module])
+processor = injector.get(planner_input, CommandProcessor)
 # processor.handlers contains instances of both UserHandler and AdminHandler
+```
+
+## Advanced Usage Patterns
+
+### Multiple Execution Patterns
+
+```python
+from izumi.distage import ModuleDef, Injector, PlannerInput
+
+class Config:
+    def __init__(self, default_user: str = "test"):
+        self.default_user = default_user
+
+class UserService:
+    def __init__(self, config: Config):
+        self.config = config
+
+    def create_user(self, name: str) -> str:
+        return f"Created user: {name}"
+
+module = ModuleDef()
+module.make(Config).using().type(Config)
+module.make(UserService).using().type(UserService)
+
+injector = Injector()
+planner_input = PlannerInput([module])
+
+# Pattern 1: Plan + Locator (most control)
+plan = injector.plan(planner_input)
+locator = injector.produce(plan)
+service = locator.get(UserService)
+
+# Pattern 2: Function injection (recommended)
+def business_logic(service: UserService, config: Config) -> str:
+    return service.create_user(config.default_user)
+
+result = injector.produce_run(planner_input, business_logic)
+
+# Pattern 3: Simple get (for quick usage)
+service = injector.get(planner_input, UserService)
 ```
 
 ## Architecture
 
 Chibi Izumi follows these design principles from the original distage:
 
-1. **Compile-time safety** - Dependencies are validated at injector creation time
-2. **No runtime reflection** - Uses type hints and signature inspection
+1. **Compile-time safety** - Dependencies are validated at plan creation time
+2. **Type-safe bindings** - Algebraic data structure ensures binding correctness
 3. **Immutable bindings** - Bindings are defined once and cannot be modified
 4. **Explicit dependency graph** - All dependencies are explicit and traceable
 5. **Fail-fast validation** - Circular and missing dependencies are detected early
+6. **Zero-configuration features** - Automatic logger injection, factory patterns
 
 ## Limitations
 
-This is a demo implementation with some simplifications compared to the full distage library:
+This is a working implementation with some simplifications compared to the full distage library:
 
-- No support for circular references
-- Limited lifecycle management
-- Simplified error handling
+- Forward references in type hints have limited support
+- No advanced lifecycle management (startup/shutdown hooks)
+- Simplified error messages compared to Scala version
+- No compile-time dependency graph visualization tools
+
+## Contributing
+
+This project was developed through AI-assisted programming with thorough manual review. Contributions, bug reports, and feedback are welcome!

@@ -103,8 +103,40 @@ def run_demos() -> int:
     return 0 if all_passed else 1
 
 
+def run_readme_validation() -> int:
+    """Validate that code examples in README.md are working."""
+    print("📖 Validating README code examples")
+
+    readme_path = Path("README.md")
+    if not readme_path.exists():
+        print("❌ README.md not found")
+        return 1
+
+    # Generate test file from README using phmdoctest
+    test_file_path = Path("test_readme.py")
+
+    # Clean up any existing test file
+    if test_file_path.exists():
+        test_file_path.unlink()
+
+    # Generate test file
+    gen_cmd = ["uv", "run", "phmdoctest", str(readme_path), "--outfile", str(test_file_path)]
+    if not run_command(gen_cmd, "Generating README tests"):
+        return 1
+
+    # Run the generated tests
+    test_cmd = ["uv", "run", "pytest", str(test_file_path), "-v"]
+    success = run_command(test_cmd, "README code examples")
+
+    # Clean up test file
+    if test_file_path.exists():
+        test_file_path.unlink()
+
+    return 0 if success else 1
+
+
 def check_all() -> int:
-    """Run all checks: tests, linting, type checking, and demos."""
+    """Run all checks: tests, linting, type checking, demos, and README validation."""
     print("🚀 Running all checks for distage-py")
     print("=" * 50)
 
@@ -113,6 +145,7 @@ def check_all() -> int:
         ("Linting", run_lint),
         ("Type Checking", run_typecheck),
         ("Demos", run_demos),
+        ("README", run_readme_validation),
     ]
 
     results = {}
@@ -149,12 +182,14 @@ if __name__ == "__main__":
             sys.exit(run_typecheck())
         elif command == "demos":
             sys.exit(run_demos())
+        elif command == "readme":
+            sys.exit(run_readme_validation())
         elif command == "check":
             sys.exit(check_all())
         else:
             print(f"Unknown command: {command}")
-            print("Available commands: test, lint, typecheck, demos, check")
+            print("Available commands: test, lint, typecheck, demos, readme, check")
             sys.exit(1)
     else:
-        print("Available commands: test, lint, typecheck, demos, check")
+        print("Available commands: test, lint, typecheck, demos, readme, check")
         print("Usage: python scripts.py <command>")

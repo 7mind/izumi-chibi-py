@@ -135,6 +135,15 @@ wheels = [
 ]
 
 [[package]]
+name = "commonmark"
+version = "0.9.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/60/48/a60f593447e8f0894ebb7f6e6c1f25dafc5e89c5879fdc9360ae93ff83f0/commonmark-0.9.1.tar.gz", hash = "sha256:452f9dc859be7f06631ddcb328b6919c67984aca654e5fefb3914d54691aed60", size = 95764, upload-time = "2019-10-04T15:37:39.817Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b1/92/dfd892312d822f36c55366118b95d914e5f16de11044a27cf10a7d71bbbf/commonmark-0.9.1-py2.py3-none-any.whl", hash = "sha256:da2f38c92590f83de410ba1a3cbceafbc74fee9def35f9251ba9a971d6d66fd9", size = 51068, upload-time = "2019-10-04T15:37:37.674Z" },
+]
+
+[[package]]
 name = "coverage"
 version = "7.10.6"
 source = { registry = "https://pypi.org/simple" }
@@ -341,6 +350,7 @@ dev = [
     { name = "deptry" },
     { name = "hatchling" },
     { name = "mypy" },
+    { name = "phmdoctest" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -359,6 +369,7 @@ dev = [
     { name = "deptry", specifier = ">=0.23.1" },
     { name = "hatchling", specifier = ">=1.27.0" },
     { name = "mypy", specifier = ">=1.17.1" },
+    { name = "phmdoctest", specifier = ">=1.4.0" },
     { name = "pyright", specifier = ">=1.1.405" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-cov", specifier = ">=6.2.1" },
@@ -446,6 +457,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729, upload-time = "2022-08-14T12:40:10.846Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979, upload-time = "2022-08-14T12:40:09.779Z" },
+]
+
+[[package]]
+name = "monotable"
+version = "3.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/f1/30e60c602de5f98a1fa3dd2e515dc4d025ee9e410b0106c43a51bb26ca3d/monotable-3.2.0.tar.gz", hash = "sha256:3e215bdac7d0849d7e4f79c67790009f1ce63814a06403bef229c347cfbe3bc6", size = 91356, upload-time = "2024-09-14T15:49:22.663Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/30/30e4ce8130ea9645f8f56dff676ce2aeb68d9d0b5f556904145d3ea18a0e/monotable-3.2.0-py3-none-any.whl", hash = "sha256:5b870a8bb02ca3717f554535f8ce5a0a62b2ad99adc237a363144d5874251bde", size = 46450, upload-time = "2024-09-14T15:49:20.528Z" },
 ]
 
 [[package]]
@@ -556,6 +576,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ca/bc/f35b8446f4531a7cb215605d100cd88b7ac6f44ab3fc94870c120ab3adbf/pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712", size = 51043, upload-time = "2023-12-10T22:30:45Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/20/ff623b09d963f88bfde16306a54e12ee5ea43e9b597108672ff3a408aad6/pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08", size = 31191, upload-time = "2023-12-10T22:30:43.14Z" },
+]
+
+[[package]]
+name = "phmdoctest"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "commonmark" },
+    { name = "monotable" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/98/86/4e967c119158e7a0d4974346a0076d529e34be44ee182c35e3a98c3ea26d/phmdoctest-1.4.0.tar.gz", hash = "sha256:eb9dd5dc415d6e48ccd3a273e250c519b1e2b9e22e21ddf6e6f716efbb0f2e09", size = 113039, upload-time = "2022-03-19T19:10:27.352Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/dd/0700cb1dda98c2677bb79d7330ff2190bd19793dc55721fbae09822838fb/phmdoctest-1.4.0-py3-none-any.whl", hash = "sha256:4c9db90314183bc874d20947dba4ee93018d0412380f26137db0050a8b7903a9", size = 43589, upload-time = "2022-03-19T19:10:25.471Z" },
 ]
 
 [[package]]
