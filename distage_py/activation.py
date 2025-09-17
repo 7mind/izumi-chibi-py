@@ -12,6 +12,7 @@ class AxisChoiceDef:
     """Base class for axis choices."""
 
     def __init__(self, name: str):
+        super().__init__()
         self.name = name
 
     def __str__(self) -> str:
@@ -98,7 +99,7 @@ class Activation:
 
     choices: dict[type[Axis], AxisChoiceDef]
 
-    def __init__(
+    def __init__(  # pyright: ignore[reportMissingSuperCall]
         self,
         *args: tuple[type[Axis], AxisChoiceDef] | dict[type[Axis], AxisChoiceDef],
         **kwargs: AxisChoiceDef,
@@ -120,6 +121,7 @@ class Activation:
                     axis_type = getattr(StandardAxis, key)
                     choices[axis_type] = value
 
+        # Use object.__setattr__ because this is a frozen dataclass
         object.__setattr__(self, "choices", choices)
 
     def get_choice(self, axis_type: type[Axis]) -> AxisChoiceDef | None:

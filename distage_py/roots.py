@@ -41,6 +41,7 @@ class Roots:
     """Defines which objects should be instantiated from the dependency graph."""
 
     def __init__(self, keys: list[DIKey]):
+        super().__init__()
         self._keys = keys
 
     @property
@@ -102,8 +103,8 @@ class RootsFinder:
             # Include all bindings
             return set(graph.get_all_bindings().keys())
 
-        visited = set()
-        to_visit = set()
+        visited: set[BindingKey] = set()
+        to_visit: set[BindingKey] = set()
 
         # Start with root keys
         for root_key in roots.keys:

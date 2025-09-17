@@ -50,6 +50,7 @@ class DependencyGraph:
     """Manages the dependency graph for the entire application."""
 
     def __init__(self) -> None:
+        super().__init__()
         self._bindings: dict[BindingKey, Binding] = {}
         self._alternative_bindings: dict[BindingKey, list[Binding]] = defaultdict(list)
         self._nodes: dict[BindingKey, GraphNode] = {}
@@ -188,7 +189,7 @@ class DependencyGraph:
             if in_degree[key] == 0:
                 queue.append(key)
 
-        result = []
+        result: list[BindingKey] = []
 
         while queue:
             key = queue.popleft()
@@ -243,7 +244,7 @@ class DependencyGraph:
             return matching_bindings[0]
 
         # If multiple bindings match, prefer more specific ones (more tags)
-        matching_bindings.sort(key=lambda b: len(b.activation_tags or set()), reverse=True)
+        matching_bindings.sort(key=lambda b: len(b.activation_tags or set()), reverse=True)  # pyright: ignore[reportUnknownArgumentType]
         return matching_bindings[0]
 
     def garbage_collect(self, reachable_keys: set[BindingKey]) -> None:

@@ -1,0 +1,4 @@
+{
+  "include": ["distage_py/"],
+  "reportUnnecessaryTypeIgnoreComment": "none"
+}

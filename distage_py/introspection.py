@@ -22,6 +22,7 @@ class DependencyInfo:
         is_optional: bool = False,
         default_value: Any = inspect.Parameter.empty,
     ):
+        super().__init__()
         self.name = name
         self.type_hint = type_hint
         self.is_optional = is_optional
@@ -50,13 +51,13 @@ class SignatureIntrospector:
             return []
 
     @staticmethod
-    def _extract_from_class(cls: type) -> list[DependencyInfo]:
+    def _extract_from_class(target_class: type) -> list[DependencyInfo]:
         """Extract dependencies from a class constructor."""
-        if is_dataclass(cls):
-            return SignatureIntrospector._extract_from_dataclass(cls)
+        if is_dataclass(target_class):
+            return SignatureIntrospector._extract_from_dataclass(target_class)
 
         try:
-            init_method = getattr(cls, "__init__", None)
+            init_method: Any = getattr(target_class, "__init__", None)  # pyright: ignore[reportUnknownArgumentType]
             if init_method:
                 return SignatureIntrospector._extract_from_callable(init_method, skip_self=True)
         except AttributeError:
@@ -65,11 +66,11 @@ class SignatureIntrospector:
         return []
 
     @staticmethod
-    def _extract_from_dataclass(cls: type) -> list[DependencyInfo]:
+    def _extract_from_dataclass(target_class: type) -> list[DependencyInfo]:
         """Extract dependencies from a dataclass."""
-        dependencies = []
+        dependencies: list[DependencyInfo] = []
 
-        for field in fields(cls):
+        for field in fields(target_class):
             is_optional = (
                 field.default != field.default_factory
                 or field.default_factory != field.default_factory
@@ -104,7 +105,7 @@ class SignatureIntrospector:
         except (ValueError, TypeError):
             return []
 
-        dependencies = []
+        dependencies: list[DependencyInfo] = []
 
         for param_name, param in signature.parameters.items():
             if skip_self and param_name == "self":
@@ -125,8 +126,10 @@ class SignatureIntrospector:
 
             is_optional = param.default != inspect.Parameter.empty
 
-            # Handle Union types (including Optional)
-            if SignatureIntrospector._is_optional_type(type_hint):
+            # Handle Union types (including Optional) - only for actual types, not strings
+            if not isinstance(type_hint, str) and SignatureIntrospector._is_optional_type(
+                type_hint
+            ):
                 is_optional = True
                 type_hint = SignatureIntrospector._extract_non_none_type(type_hint)
 
@@ -141,7 +144,7 @@ class SignatureIntrospector:
         return dependencies
 
     @staticmethod
-    def _is_optional_type(type_hint: type) -> bool:
+    def _is_optional_type(type_hint: Any) -> bool:
         """Check if a type hint represents an Optional type."""
         origin = get_origin(type_hint)
         if origin is not None:
@@ -154,7 +157,7 @@ class SignatureIntrospector:
         return False
 
     @staticmethod
-    def _extract_non_none_type(type_hint: type) -> Any:
+    def _extract_non_none_type(type_hint: Any) -> Any:
         """Extract the non-None type from an Optional type."""
         args = get_args(type_hint)
         if args:
@@ -166,7 +169,7 @@ class SignatureIntrospector:
     @staticmethod
     def get_binding_keys(dependencies: list[DependencyInfo]) -> list[BindingKey]:
         """Convert dependency information to binding keys."""
-        keys = []
+        keys: list[BindingKey] = []
         for dep in dependencies:
             # Skip dependencies with 'Any' type hint as they're usually introspection failures
             if dep.type_hint == Any:

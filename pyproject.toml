@@ -17,6 +17,11 @@ classifiers = [
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
 
+
+[project.urls]
+Homepage = "https://github.com/7mind/izumi-chibi-py"
+Issues = "https://github.com/7mind/izumi-chibi-py/issues"
+
 [dependency-groups]
 dev = [
     "deptry>=0.23.1",

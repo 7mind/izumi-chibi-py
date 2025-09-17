@@ -32,6 +32,7 @@ class ModuleDef:
     """DSL for defining dependency injection bindings."""
 
     def __init__(self) -> None:
+        super().__init__()
         self._bindings: list[Binding] = []
 
     def make(self, target_type: type[T]) -> BindingBuilder[T]:
@@ -46,8 +47,8 @@ class ModuleDef:
         """Create a factory binding."""
         return FactoryBindingBuilder(self, factory_type)
 
-    def _add_binding(self, binding: Binding) -> None:
-        """Internal method to add a binding."""
+    def add_binding(self, binding: Binding) -> None:
+        """Add a binding to this module."""
         self._bindings.append(binding)
 
     @property
@@ -66,6 +67,7 @@ class BindingBuilder[T]:
         tag: Tag | None = None,
         activation_tags: set[AxisChoiceDef] | None = None,
     ) -> None:
+        super().__init__()
         self._module = module
         self._target_type = target_type
         self._tag = tag
@@ -79,7 +81,7 @@ class BindingBuilder[T]:
         for tag in tags:
             if isinstance(tag, Tag):
                 new_tag = tag
-            elif isinstance(tag, AxisChoiceDef):
+            elif isinstance(tag, AxisChoiceDef):  # pyright: ignore[reportUnnecessaryIsInstance]
                 new_activation_tags.add(tag)
 
         return BindingBuilder(self._module, self._target_type, new_tag, new_activation_tags)
@@ -95,7 +97,7 @@ class BindingBuilder[T]:
         else:
             binding = Binding(key, BindingType.INSTANCE, implementation, self._activation_tags)
 
-        self._module._add_binding(binding)
+        self._module.add_binding(binding)
 
     def to(self, implementation_type: type[T]) -> None:
         """Bind to a specific implementation type."""
@@ -106,6 +108,7 @@ class SetBindingBuilder[T]:
     """Builder for creating set bindings."""
 
     def __init__(self, module: ModuleDef, target_type: type[T], tag: Tag | None = None):
+        super().__init__()
         self._module = module
         self._target_type = target_type
         self._tag = tag
@@ -119,7 +122,7 @@ class SetBindingBuilder[T]:
         else:
             binding = Binding(key, BindingType.SET_ELEMENT, implementation)
 
-        self._module._add_binding(binding)
+        self._module.add_binding(binding)
         return self
 
     def ref(self, implementation_type: type[T]) -> SetBindingBuilder[T]:
@@ -131,6 +134,7 @@ class FactoryBindingBuilder[T]:
     """Builder for creating factory bindings."""
 
     def __init__(self, module: ModuleDef, factory_type: type[T]):
+        super().__init__()
         self._module = module
         self._factory_type = factory_type
 
@@ -138,7 +142,7 @@ class FactoryBindingBuilder[T]:
         """Bind the factory to a specific implementation."""
         key = BindingKey(self._factory_type, None)
         binding = Binding(key, BindingType.FACTORY, factory_impl)
-        self._module._add_binding(binding)
+        self._module.add_binding(binding)
 
 
 class Injector:
@@ -147,6 +151,7 @@ class Injector:
     def __init__(
         self, *modules: ModuleDef, roots: Roots | None = None, activation: Activation | None = None
     ):
+        super().__init__()
         self._modules = modules
         self._roots = roots or Roots.everything()
         self._activation = activation or Activation.empty()

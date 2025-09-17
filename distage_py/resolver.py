@@ -24,6 +24,7 @@ class DependencyResolver:
         activation: Activation | None = None,
         roots: Roots | None = None,
     ):
+        super().__init__()
         self._graph = graph
         self._activation = activation
         self._roots = roots
@@ -74,7 +75,7 @@ class DependencyResolver:
 
     def _resolve_set_binding_direct(self, set_bindings: list[Binding]) -> set[Any]:
         """Resolve set bindings directly from a list of bindings."""
-        result_set = set()
+        result_set: set[Any] = set()
 
         for binding in set_bindings:
             instance = self._create_from_binding(binding)

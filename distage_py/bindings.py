@@ -55,10 +55,7 @@ class Binding:
         if not self.activation_tags:
             return True  # Untagged bindings match any activation
 
-        if isinstance(activation, Activation):
-            return activation.is_compatible_with_tags(self.activation_tags)
-
-        return True
+        return activation.is_compatible_with_tags(self.activation_tags)
 
     def __str__(self) -> str:
         impl_name = getattr(self.implementation, "__name__", str(self.implementation))
