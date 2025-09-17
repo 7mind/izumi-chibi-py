@@ -93,8 +93,9 @@ class TestLocator(unittest.TestCase):
         module = ModuleDef()
         module.make(Service).using(Service)
 
-        injector = Injector(module)
-        plan = injector.plan()
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        plan = injector.plan(planner_input)
         locator = Locator(plan)
 
         # Same locator should return the same instance
@@ -114,8 +115,9 @@ class TestLocator(unittest.TestCase):
         module = ModuleDef()
         module.make(Service).using(Service)
 
-        injector = Injector(module)
-        plan = injector.plan()
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        plan = injector.plan(planner_input)
         locator = Locator(plan)
 
         # Get an instance
@@ -143,8 +145,9 @@ class TestLocator(unittest.TestCase):
         module = ModuleDef()
         module.make(ExistingService).using(ExistingService)
 
-        injector = Injector(module)
-        plan = injector.plan()
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        plan = injector.plan(planner_input)
         locator = Locator(plan)
 
         # Test has() method
@@ -178,8 +181,9 @@ class TestLocator(unittest.TestCase):
         module = ModuleDef()
         module.make(Service).using(Service)
 
-        injector = Injector(module)
-        service = injector.get(Service)
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.get(planner_input, Service)
 
         self.assertIsInstance(service, Service)
         self.assertEqual(service.get_message(), "Hello World")
@@ -240,15 +244,15 @@ class TestLocator(unittest.TestCase):
         module.make(ServiceA).using(ServiceA)
         module.make(ServiceB).using(ServiceB)
 
-        injector = Injector(module)
+        injector = Injector()
 
         # Create plan with specific roots
         specific_roots = Roots.target(ServiceA)
-        plan_with_roots = injector.plan(roots=specific_roots)
+        planner_input = PlannerInput([module], roots=specific_roots)
+        plan_with_roots = injector.plan(planner_input)
 
         # The plan should have the overridden roots
         self.assertEqual(plan_with_roots.roots, specific_roots)
-        self.assertNotEqual(plan_with_roots.roots, injector.roots)
 
     def test_plan_metadata(self):
         """Test Plan metadata and information methods."""
@@ -264,8 +268,9 @@ class TestLocator(unittest.TestCase):
         module.make(ServiceA).using(ServiceA)
         module.make(ServiceB).using(ServiceB)
 
-        injector = Injector(module)
-        plan = injector.plan()
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        plan = injector.plan(planner_input)
 
         # Test keys() method
         keys = plan.keys()
@@ -295,8 +300,9 @@ class TestLocator(unittest.TestCase):
         module.make(str).tagged(prod_tag).using("production-db")
         module.make(str).tagged(test_tag).using("test-db")
 
-        injector = Injector(module)
-        plan = injector.plan()
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        plan = injector.plan(planner_input)
         locator = Locator(plan)
 
         prod_db = locator.get(str, prod_tag)
@@ -329,8 +335,9 @@ class TestLocator(unittest.TestCase):
         module.many(Handler).add(handler1).add(handler2)
         module.make(Service).using(Service)
 
-        injector = Injector(module)
-        plan = injector.plan()
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        plan = injector.plan(planner_input)
         locator = Locator(plan)
 
         service = locator.get(Service)
@@ -360,8 +367,9 @@ class TestLocator(unittest.TestCase):
         module.make(Calculator).using(Calculator)
         module.make(MathService).using(MathService)
 
-        injector = Injector(module)
-        plan = injector.plan()
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        plan = injector.plan(planner_input)
         locator = Locator(plan)
 
         # Test run method with function that has dependencies automatically resolved

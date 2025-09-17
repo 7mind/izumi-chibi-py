@@ -7,11 +7,9 @@ from __future__ import annotations
 from typing import TypeVar
 
 from .graph import DependencyGraph
+from .keys import DIKey
 
 T = TypeVar("T")
-
-
-from .keys import DIKey
 
 
 class Roots:

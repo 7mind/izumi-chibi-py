@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Any
 
 from .activation import Activation
+from .keys import DIKey
 
 
 class BindingType(Enum):
@@ -19,10 +20,6 @@ class BindingType(Enum):
     INSTANCE = "instance"
     FACTORY = "factory"
     SET_ELEMENT = "set_element"
-
-
-# Import DIKey to use as the binding key
-from .keys import DIKey
 
 
 @dataclass(frozen=True)

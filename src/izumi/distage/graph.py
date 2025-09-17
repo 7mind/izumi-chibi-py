@@ -63,8 +63,9 @@ class DependencyGraph:
         if binding.binding_type == BindingType.SET_ELEMENT:
             self._set_bindings[binding.key].append(binding)
         else:
-            # Store all bindings as alternatives initially
-            self._alternative_bindings[binding.key].append(binding)
+            # Group alternatives by type only (ignore tag for activation purposes)
+            type_key = DIKey(binding.key.target_type, None)
+            self._alternative_bindings[type_key].append(binding)
 
             # If this is the first binding or an untagged binding, also store in main bindings
             if binding.key not in self._bindings or not binding.activation_tags:
@@ -211,14 +212,17 @@ class DependencyGraph:
 
     def filter_bindings_by_activation(self, activation: Activation) -> None:
         """Filter bindings based on activation, selecting the best match for each key."""
-        # Import here to avoid circular import
-
         filtered_bindings = {}
-        for key, alternatives in self._alternative_bindings.items():
-            # Find the best matching binding for this key
+        for type_key, alternatives in self._alternative_bindings.items():
+            # Find the best matching binding for this type
             best_binding = self._select_best_binding(alternatives, activation)
             if best_binding:
-                filtered_bindings[key] = best_binding
+                # Store the best binding for the untagged type key (what dependents will request)
+                filtered_bindings[type_key] = best_binding
+                # Also store it for any specific tagged keys that exist
+                for binding in alternatives:
+                    if binding.key in self._bindings:
+                        filtered_bindings[binding.key] = best_binding
 
         self._bindings = filtered_bindings
         self._validated = False

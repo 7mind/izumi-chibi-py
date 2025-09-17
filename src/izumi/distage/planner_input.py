@@ -28,7 +28,7 @@ class PlannerInput:
         self,
         modules: tuple[ModuleDef, ...] | list[ModuleDef],
         roots: Roots | None = None,
-        activation: Activation | None = None
+        activation: Activation | None = None,
     ):
         """
         Create a new PlannerInput.
@@ -42,9 +42,9 @@ class PlannerInput:
         modules_tuple = tuple(modules) if isinstance(modules, list) else modules
 
         # Use object.__setattr__ since we're frozen
-        object.__setattr__(self, 'modules', modules_tuple)
-        object.__setattr__(self, 'roots', roots or Roots.everything())
-        object.__setattr__(self, 'activation', activation or Activation.empty())
+        object.__setattr__(self, "modules", modules_tuple)
+        object.__setattr__(self, "roots", roots or Roots.everything())
+        object.__setattr__(self, "activation", activation or Activation.empty())
 
     def with_roots(self, roots: Roots) -> PlannerInput:
         """Create a new PlannerInput with different roots."""
@@ -60,7 +60,9 @@ class PlannerInput:
         return PlannerInput(new_modules, self.roots, self.activation)
 
     @staticmethod
-    def target(modules: tuple[ModuleDef, ...] | list[ModuleDef], *target_types: type) -> PlannerInput:
+    def target(
+        modules: tuple[ModuleDef, ...] | list[ModuleDef], *target_types: type
+    ) -> PlannerInput:
         """
         Create a PlannerInput targeting specific types.
 

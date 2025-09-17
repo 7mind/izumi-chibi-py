@@ -46,6 +46,7 @@ def main():
 
     # Option 2: Use produce_run for function-based injection (recommended)
     print("\n=== Option 2: Function-based injection ===")
+
     def my_application(user_service: UserService, database: Database) -> str:
         user_data = user_service.get_user(456)
         db_info = database.query("SELECT COUNT(*) FROM users")

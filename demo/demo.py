@@ -14,7 +14,7 @@ This demo shows:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from izumi.distage import Injector, ModuleDef, Tag
+from izumi.distage import Injector, ModuleDef, PlannerInput, Tag
 
 # Example domain: A simple web service with different components
 
@@ -157,15 +157,16 @@ def main():
     print("-" * 30)
 
     try:
-        prod_injector = Injector(prod_module)
+        injector = Injector()
+        planner_input = PlannerInput([prod_module])
 
         # Get various services
-        user_service = prod_injector.get(UserService)
+        user_service = injector.get(planner_input, UserService)
         result = user_service.create_user("alice")
         print(f"Result: {result}")
 
         # Get command executor and run commands
-        executor = prod_injector.get(CommandExecutor)
+        executor = injector.get(planner_input, CommandExecutor)
         command_results = executor.execute_all()
         for cmd_result in command_results:
             print(f"Command result: {cmd_result}")
@@ -178,13 +179,14 @@ def main():
 
     try:
         # Combine modules - test module overrides will take precedence
-        test_injector = Injector(prod_module, test_module)
+        injector = Injector()
+        planner_input = PlannerInput([prod_module, test_module])
 
-        config = test_injector.get(Config)
+        config = injector.get(planner_input, Config)
         print(f"Config: {config}")
 
         # This will use the test database
-        database = test_injector.get(Database, test_tag)
+        database = injector.get(planner_input, Database, test_tag)
         result = database.query("SELECT * FROM users")
         print(f"Test DB result: {result}")
 
@@ -209,7 +211,8 @@ def main():
     circular_module.make(B).using(B)
 
     try:
-        Injector(circular_module)
+        injector = Injector()
+        PlannerInput([circular_module])
         print(
             "This shouldn't print - circular dependency should be caught during graph construction"
         )
@@ -230,7 +233,8 @@ def main():
     incomplete_module.make(ServiceWithMissingDep).using(ServiceWithMissingDep)
 
     try:
-        Injector(incomplete_module)
+        injector = Injector()
+        PlannerInput([incomplete_module])
         print(
             "This shouldn't print - missing dependency should be caught during graph construction"
         )

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from .bindings import Binding, BindingType
 from .keys import DIKey
@@ -26,7 +26,7 @@ class ModuleDef:
 
     bindings: list[Binding]
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Use object.__setattr__ since we're frozen
         object.__setattr__(self, "bindings", [])
 
@@ -62,15 +62,23 @@ class BindingBuilder[T]:
         """Bind to a specific implementation, instance, or factory."""
         key = DIKey(self._target_type, self._tag)
 
+        # Convert tag to activation_tags if it's an AxisChoiceDef
+        activation_tags: set[Any] = set()
+        if self._tag is not None:
+            from .activation import AxisChoiceDef
+
+            if isinstance(self._tag, AxisChoiceDef):
+                activation_tags.add(self._tag)
+
         if isinstance(implementation, type):
             # Class binding
-            binding = Binding(key, BindingType.CLASS, implementation)
+            binding = Binding(key, BindingType.CLASS, implementation, activation_tags)
         elif callable(implementation) and not isinstance(implementation, type):
             # Factory binding
-            binding = Binding(key, BindingType.FACTORY, implementation)
+            binding = Binding(key, BindingType.FACTORY, implementation, activation_tags)
         else:
             # Instance binding
-            binding = Binding(key, BindingType.INSTANCE, implementation)
+            binding = Binding(key, BindingType.INSTANCE, implementation, activation_tags)
 
         self._module.add_binding(binding)
 
@@ -85,7 +93,7 @@ class SetBindingBuilder[T]:
     def add(self, instance: T) -> SetBindingBuilder[T]:
         """Add an instance to the set."""
         # Create a set binding key
-        key = DIKey(set[self._target_type], None)  # type: ignore[valid-type]
+        key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
         binding = Binding(key, BindingType.SET_ELEMENT, instance)
         self._module.add_binding(binding)
         return self

@@ -6,7 +6,7 @@ Unit tests for Chibi Izumi library.
 import unittest
 from dataclasses import dataclass
 
-from izumi.distage import Injector, ModuleDef, Tag
+from izumi.distage import Injector, ModuleDef, PlannerInput, Tag
 from izumi.distage.graph import CircularDependencyError, MissingBindingError
 from izumi.distage.introspection import SignatureIntrospector
 
@@ -24,12 +24,13 @@ class TestBasicBinding(unittest.TestCase):
         module = ModuleDef()
         module.make(Service).using(Service)
 
-        injector = Injector(module)
+        injector = Injector()
+        planner_input = PlannerInput([module])
 
         def get_service(service: Service) -> Service:
             return service
 
-        service = injector.produce_run(get_service)
+        service = injector.produce_run(planner_input, get_service)
 
         self.assertIsInstance(service, Service)
         self.assertEqual(service.get_message(), "Hello World")
@@ -46,8 +47,9 @@ class TestBasicBinding(unittest.TestCase):
         module = ModuleDef()
         module.make(Config).using(config_instance)
 
-        injector = Injector(module)
-        config = injector.get(Config)
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        config = injector.get(planner_input, Config)
 
         self.assertIs(config, config_instance)
         self.assertEqual(config.name, "test-config")
@@ -61,8 +63,9 @@ class TestBasicBinding(unittest.TestCase):
         module = ModuleDef()
         module.make(str).using(create_service)
 
-        injector = Injector(module)
-        result = injector.get(str)
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        result = injector.get(planner_input, str)
 
         self.assertEqual(result, "factory-created")
 
@@ -85,8 +88,9 @@ class TestDependencyInjection(unittest.TestCase):
         module.make(Database).using(Database("test-db"))
         module.make(Service).using(Service)
 
-        injector = Injector(module)
-        service = injector.get(Service)
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.get(planner_input, Service)
 
         self.assertIsInstance(service.database, Database)
         self.assertEqual(service.database.connection_string, "test-db")
@@ -101,8 +105,9 @@ class TestDependencyInjection(unittest.TestCase):
         module = ModuleDef()
         module.make(OptionalService).using(OptionalService)
 
-        injector = Injector(module)
-        service = injector.get(OptionalService)
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.get(planner_input, OptionalService)
 
         self.assertEqual(service.config, "default")
 
@@ -120,10 +125,11 @@ class TestTaggedBindings(unittest.TestCase):
         module.make(str).tagged(prod_tag).using("production-db")
         module.make(str).tagged(test_tag).using("test-db")
 
-        injector = Injector(module)
+        injector = Injector()
+        planner_input = PlannerInput([module])
 
-        prod_db = injector.get(str, prod_tag)
-        test_db = injector.get(str, test_tag)
+        prod_db = injector.get(planner_input, str, prod_tag)
+        test_db = injector.get(planner_input, str, test_tag)
 
         self.assertEqual(prod_db, "production-db")
         self.assertEqual(test_db, "test-db")
@@ -156,8 +162,9 @@ class TestSetBindings(unittest.TestCase):
         module.many(Handler).add(handler1).add(handler2)
         module.make(Service).using(Service)
 
-        injector = Injector(module)
-        service = injector.get(Service)
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.get(planner_input, Service)
 
         self.assertEqual(len(service.handlers), 2)
         self.assertIn(handler1, service.handlers)
@@ -233,7 +240,9 @@ class TestGraphValidation(unittest.TestCase):
 
         # Either circular dependency or missing dependency should be caught
         with self.assertRaises((CircularDependencyError, MissingBindingError)):
-            Injector(module)
+            injector = Injector()
+            planner_input = PlannerInput([module])
+            injector.get(planner_input, A)
 
     def test_missing_dependency_detection(self):
         """Test detection of missing dependencies."""
@@ -249,7 +258,9 @@ class TestGraphValidation(unittest.TestCase):
         module.make(Service).using(Service)
 
         with self.assertRaises(MissingBindingError):
-            Injector(module)
+            injector = Injector()
+            planner_input = PlannerInput([module])
+            injector.get(planner_input, Service)
 
 
 class TestMultipleModules(unittest.TestCase):
@@ -275,8 +286,9 @@ class TestMultipleModules(unittest.TestCase):
         ext_module = ModuleDef()
         ext_module.make(Service).using(Service)
 
-        injector = Injector(base_module, ext_module)
-        service = injector.get(Service)
+        injector = Injector()
+        planner_input = PlannerInput([base_module, ext_module])
+        service = injector.get(planner_input, Service)
 
         self.assertEqual(service.database.host, "localhost")
 

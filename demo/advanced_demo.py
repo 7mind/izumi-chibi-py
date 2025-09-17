@@ -11,7 +11,7 @@ This demo demonstrates the corrected distage implementation with:
 
 from abc import ABC, abstractmethod
 
-from izumi.distage import Activation, Injector, ModuleDef, Roots, StandardAxis
+from izumi.distage import Activation, Injector, ModuleDef, PlannerInput, Roots, StandardAxis
 from izumi.distage.activation import Axis, AxisChoiceDef
 
 
@@ -184,8 +184,9 @@ def main():
     app_roots = Roots.target(Application)
 
     try:
-        injector = Injector(base_module, roots=app_roots, activation=prod_activation)
-        app = injector.get(Application)
+        injector = Injector()
+        planner_input = PlannerInput([base_module], roots=app_roots, activation=prod_activation)
+        app = injector.get(planner_input, Application)
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -203,8 +204,9 @@ def main():
     )
 
     try:
-        injector = Injector(base_module, roots=app_roots, activation=test_activation)
-        app = injector.get(Application)
+        injector = Injector()
+        planner_input = PlannerInput([base_module], roots=app_roots, activation=test_activation)
+        app = injector.get(planner_input, Application)
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -223,8 +225,9 @@ def main():
     )
 
     try:
-        injector = Injector(base_module, roots=app_roots, activation=caps_activation)
-        app = injector.get(Application)
+        injector = Injector()
+        planner_input = PlannerInput([base_module], roots=app_roots, activation=caps_activation)
+        app = injector.get(planner_input, Application)
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -243,8 +246,9 @@ def main():
     )
 
     try:
-        injector = Injector(base_module, roots=app_roots, activation=dummy_activation)
-        app = injector.get(Application)
+        injector = Injector()
+        planner_input = PlannerInput([base_module], roots=app_roots, activation=dummy_activation)
+        app = injector.get(planner_input, Application)
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -255,18 +259,20 @@ def main():
 
     print("With specific roots (should not create UnusedService):")
     try:
-        injector_with_roots = Injector(base_module, roots=app_roots, activation=test_activation)
-        app = injector_with_roots.get(Application)
+        injector = Injector()
+        planner_input = PlannerInput([base_module], roots=app_roots, activation=test_activation)
+        app = injector.get(planner_input, Application)
         print("✓ Application created without UnusedService")
     except Exception as e:
         print(f"Error: {e}")
 
     print("\nWith everything roots (will create all bindings):")
     try:
-        injector_everything = Injector(
-            base_module, roots=Roots.everything(), activation=test_activation
+        injector = Injector()
+        planner_input = PlannerInput(
+            [base_module], roots=Roots.everything(), activation=test_activation
         )
-        injector_everything.get(UnusedService)
+        injector.get(planner_input, UnusedService)
         print("✓ UnusedService was created (demonstrates no garbage collection)")
     except Exception as e:
         print(f"Error: {e}")
@@ -278,9 +284,10 @@ def main():
     multi_roots = Roots.target(Application, UnusedService)
 
     try:
-        injector = Injector(base_module, roots=multi_roots, activation=test_activation)
-        app = injector.get(Application)
-        injector.get(UnusedService)
+        injector = Injector()
+        planner_input = PlannerInput([base_module], roots=multi_roots, activation=test_activation)
+        app = injector.get(planner_input, Application)
+        injector.get(planner_input, UnusedService)
         print("✓ Both Application and UnusedService created as specified by roots")
     except Exception as e:
         print(f"Error: {e}")

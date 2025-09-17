@@ -60,11 +60,11 @@ class Locator:
             # Create a resolver and resolve this key
             resolver = DependencyResolver(self._plan.graph, self._plan.activation)
             # Pass existing instances to the resolver
-            resolver._instances.update(self._instances)
+            resolver._instances.update(self._instances)  # pyright: ignore[reportPrivateUsage]
 
-            instance = resolver.resolve(key)
+            resolver.resolve(key)
             # Update our instances with anything new that was resolved
-            self._instances.update(resolver._instances)
+            self._instances.update(resolver._instances)  # pyright: ignore[reportPrivateUsage]
 
         return self._instances[key]  # type: ignore[return-value]
 

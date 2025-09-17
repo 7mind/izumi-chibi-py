@@ -5,7 +5,7 @@ Unit tests for Chibi Izumi advanced features: Roots and Activations.
 
 import unittest
 
-from izumi.distage import Activation, DIKey, Injector, ModuleDef, Roots, StandardAxis
+from izumi.distage import Activation, DIKey, Injector, ModuleDef, PlannerInput, Roots, StandardAxis
 from izumi.distage.activation import Axis, AxisChoiceDef
 
 
@@ -125,20 +125,23 @@ class TestRootsAndActivations(unittest.TestCase):
         module = ModuleDef()
         module.make(self.Database).tagged(StandardAxis.Mode.Prod).using(self.ProdDatabase)
         module.make(self.Database).tagged(StandardAxis.Mode.Test).using(self.TestDatabase)
+        module.make(self.Database).using(self.Database)  # Fallback binding
         module.make(self.Service).using(self.Service)
 
         # Test production activation
         prod_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Prod})
-        injector = Injector(module, activation=prod_activation)
-        service = injector.get(self.Service)
+        injector = Injector()
+        planner_input = PlannerInput([module], activation=prod_activation)
+        service = injector.get(planner_input, self.Service)
 
         result = service.process()
         self.assertIn("ProdDB", result)
 
         # Test testing activation
         test_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Test})
-        injector = Injector(module, activation=test_activation)
-        service = injector.get(self.Service)
+        injector = Injector()
+        planner_input = PlannerInput([module], activation=test_activation)
+        service = injector.get(planner_input, self.Service)
 
         result = service.process()
         self.assertIn("TestDB", result)
@@ -152,15 +155,16 @@ class TestRootsAndActivations(unittest.TestCase):
 
         # With specific roots, UnusedService should not be available
         service_roots = Roots.target(self.Service)
-        injector = Injector(module, roots=service_roots)
+        injector = Injector()
+        planner_input = PlannerInput([module], roots=service_roots)
 
         # Service should be available
-        service = injector.get(self.Service)
+        service = injector.get(planner_input, self.Service)
         self.assertIsInstance(service, self.Service)
 
         # UnusedService should not be available (binding was garbage collected)
         with self.assertRaises(ValueError):
-            injector.get(self.UnusedService)
+            injector.get(planner_input, self.UnusedService)
 
     def test_everything_roots_no_garbage_collection(self):
         """Test that everything roots prevent garbage collection."""
@@ -170,10 +174,11 @@ class TestRootsAndActivations(unittest.TestCase):
         module.make(self.UnusedService).using(self.UnusedService)
 
         # With everything roots, all services should be available
-        injector = Injector(module, roots=Roots.everything())
+        injector = Injector()
+        planner_input = PlannerInput([module], roots=Roots.everything())
 
-        service = injector.get(self.Service)
-        unused = injector.get(self.UnusedService)
+        service = injector.get(planner_input, self.Service)
+        unused = injector.get(planner_input, self.UnusedService)
 
         self.assertIsInstance(service, self.Service)
         self.assertIsInstance(unused, self.UnusedService)
@@ -187,10 +192,11 @@ class TestRootsAndActivations(unittest.TestCase):
 
         # Multiple roots should keep both Service and UnusedService
         multi_roots = Roots.target(self.Service, self.UnusedService)
-        injector = Injector(module, roots=multi_roots)
+        injector = Injector()
+        planner_input = PlannerInput([module], roots=multi_roots)
 
-        service = injector.get(self.Service)
-        unused = injector.get(self.UnusedService)
+        service = injector.get(planner_input, self.Service)
+        unused = injector.get(planner_input, self.UnusedService)
 
         self.assertIsInstance(service, self.Service)
         self.assertIsInstance(unused, self.UnusedService)
@@ -200,6 +206,7 @@ class TestRootsAndActivations(unittest.TestCase):
         module = ModuleDef()
         module.make(self.Database).tagged(StandardAxis.Mode.Prod).using(self.ProdDatabase)
         module.make(self.Database).tagged(StandardAxis.Mode.Test).using(self.TestDatabase)
+        module.make(self.Database).using(self.Database)  # Fallback binding
         module.make(self.Service).using(self.Service)
         module.make(self.UnusedService).using(self.UnusedService)
 
@@ -207,9 +214,10 @@ class TestRootsAndActivations(unittest.TestCase):
         service_roots = Roots.target(self.Service)
         test_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Test})
 
-        injector = Injector(module, roots=service_roots, activation=test_activation)
+        injector = Injector()
+        planner_input = PlannerInput([module], roots=service_roots, activation=test_activation)
 
-        service = injector.get(self.Service)
+        service = injector.get(planner_input, self.Service)
         result = service.process()
 
         # Should use TestDatabase due to activation
@@ -217,7 +225,7 @@ class TestRootsAndActivations(unittest.TestCase):
 
         # UnusedService should not be available due to roots
         with self.assertRaises(ValueError):
-            injector.get(self.UnusedService)
+            injector.get(planner_input, self.UnusedService)
 
 
 class TestCustomActivationAxis(unittest.TestCase):
@@ -254,18 +262,21 @@ class TestCustomActivationAxis(unittest.TestCase):
         module = ModuleDef()
         module.make(Service).tagged(Priority.High).using(HighPriorityService)
         module.make(Service).tagged(Priority.Low).using(LowPriorityService)
+        module.make(Service).using(Service)  # Fallback binding
 
         # Test high priority activation
         high_activation = Activation({Priority: Priority.High})
-        injector = Injector(module, activation=high_activation)
-        service = injector.get(Service)
+        injector = Injector()
+        planner_input = PlannerInput([module], activation=high_activation)
+        service = injector.get(planner_input, Service)
 
         self.assertEqual(service.name, "high")
 
         # Test low priority activation
         low_activation = Activation({Priority: Priority.Low})
-        injector = Injector(module, activation=low_activation)
-        service = injector.get(Service)
+        injector = Injector()
+        planner_input = PlannerInput([module], activation=low_activation)
+        service = injector.get(planner_input, Service)
 
         self.assertEqual(service.name, "low")
 
@@ -294,14 +305,16 @@ class TestFallbackBindings(unittest.TestCase):
 
         # With test activation, should use TestService
         test_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Test})
-        injector = Injector(module, activation=test_activation)
-        service = injector.get(Service)
+        injector = Injector()
+        planner_input = PlannerInput([module], activation=test_activation)
+        service = injector.get(planner_input, Service)
         self.assertEqual(service.name, "test")
 
         # With prod activation (no matching binding), should use fallback
         prod_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Prod})
-        injector = Injector(module, activation=prod_activation)
-        service = injector.get(Service)
+        injector = Injector()
+        planner_input = PlannerInput([module], activation=prod_activation)
+        service = injector.get(planner_input, Service)
         self.assertEqual(service.name, "default")
 
 

@@ -6,6 +6,7 @@
 - Follow the existing code style and patterns in the project
 - Never add backward compatibility or legacy support code
 - Adhere to fail-fast approach, use assertions instead of conditional fallbacks
+- Always remove debug scripts and other artifacts after debugging
 
 ## Development Commands
 
