@@ -36,13 +36,8 @@ class LoggerLocationIntrospector:
         try:
             # Skip frames within the DI system and look for the first meaningful user code
             frames_to_check: list[FrameType] = []
-            current_frame: FrameType | None = frame
+            current_frame = frame.f_back
             while current_frame is not None:
-                next_frame = current_frame.f_back
-                if next_frame is None:
-                    break
-                current_frame = next_frame
-
                 filename: str = current_frame.f_code.co_filename
                 # Skip frames within the distage package and other internal frames
                 if (
@@ -52,6 +47,7 @@ class LoggerLocationIntrospector:
                     and "<" not in filename  # Skip dynamic code frames
                 ):
                     frames_to_check.append(current_frame)
+                current_frame = current_frame.f_back
 
             # Look for the best frame - prefer constructors and meaningful user code
             for check_frame in frames_to_check:
@@ -72,14 +68,15 @@ class LoggerLocationIntrospector:
 
             # If no constructor found, look for other meaningful user code
             for check_frame in frames_to_check:
-                frame_filename2: str = check_frame.f_code.co_filename
                 frame_function_name2: str = check_frame.f_code.co_name
 
                 # Skip internal methods but allow main functions
                 if (
                     not frame_function_name2.startswith("_")
                     and frame_function_name2 not in ["<module>"]
-                    and not frame_function_name2.startswith("test_")  # Skip test methods for cleaner names
+                    and not frame_function_name2.startswith(
+                        "test_"
+                    )  # Skip test methods for cleaner names
                 ):
                     return LoggerLocationIntrospector._extract_location_from_frame(check_frame)
 

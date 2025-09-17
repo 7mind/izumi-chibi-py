@@ -5,6 +5,8 @@ A Python re-implementation of some core concepts from Scala's [Izumi Project](ht
 
 The port was done by guiding Claude with thorough manual reviews.
 
+At this point the project is not battle-tested. Expect dragons, landmines and varying mileage.
+
 ## Features
 
 `distage` provides a powerful, type-safe dependency injection framework with:
