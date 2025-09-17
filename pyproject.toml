@@ -3,8 +3,19 @@ name = "izumi"
 version = "0.1.0"
 requires-python = ">=3.12.0"
 dependencies = [
-
+    "beartype>=0.19.0",
 ]
+authors = [
+    { name="Pavel Shirshov", email="pavel@7mind.io" },
+]
+description = "Simplified implementation of Staged Dependency Injection from Scala's distage library of Izumi Project"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
 
 [dependency-groups]
 dev = [
@@ -18,6 +29,10 @@ dev = [
     "pytest-mock>=3.14.1",
     "pytest-xdist>=3.8.0",
 ]
+
+# Development scripts
+# Run: uv run python scripts.py <command>
+# Available commands: check, test, lint, typecheck
 
 
 
@@ -85,11 +100,15 @@ warn_unused_ignores = true
 warn_no_return = true
 check_untyped_defs = true
 strict_equality = true
+ignore_missing_imports = false
+exclude_gitignore = true
+strict = true
 exclude = [
+    "tests",
+    "demo",
     "debug/",
 ]
 
 [[tool.mypy.overrides]]
 module = [
 ]
-ignore_missing_imports = true

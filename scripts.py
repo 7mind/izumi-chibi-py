@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""
+Development scripts for distage-py project.
+
+These scripts integrate with uv to run various checks and tests.
+"""
+
+import subprocess
+import sys
+
+
+def run_command(cmd: list[str], description: str) -> bool:
+    """Run a command and return True if successful."""
+    print(f"\n🔄 {description}...")
+    print(f"Running: {' '.join(cmd)}")
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=False)
+        print(f"✅ {description} passed")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ {description} failed with exit code {e.returncode}")
+        return False
+    except FileNotFoundError:
+        print(f"❌ Command not found: {cmd[0]}")
+        return False
+
+
+def run_tests() -> int:
+    """Run the test suite."""
+    print("🧪 Running test suite")
+    success = run_command(["uv", "run", "pytest", "-v"], "Tests")
+    return 0 if success else 1
+
+
+def run_lint() -> int:
+    """Run linting checks."""
+    print("🔍 Running linting checks")
+
+    checks = [
+        (["uv", "run", "ruff", "check", "."], "Ruff linting"),
+        (["uv", "run", "ruff", "format", "--check", "."], "Ruff formatting"),
+    ]
+
+    all_passed = True
+    for cmd, desc in checks:
+        if not run_command(cmd, desc):
+            all_passed = False
+
+    if not all_passed:
+        print("\n💡 To auto-fix formatting issues, run: uv run ruff format .")
+        print("💡 To auto-fix some linting issues, run: uv run ruff check --fix .")
+
+    return 0 if all_passed else 1
+
+
+def run_typecheck() -> int:
+    """Run type checking with both mypy and pyright."""
+    print("🔬 Running type checking")
+
+    checks = [
+        (["uv", "run", "mypy", "distage_py/"], "MyPy type checking"),
+        (["uv", "run", "pyright", "distage_py/"], "Pyright type checking"),
+    ]
+
+    all_passed = True
+    for cmd, desc in checks:
+        if not run_command(cmd, desc):
+            all_passed = False
+
+    return 0 if all_passed else 1
+
+
+def check_all() -> int:
+    """Run all checks: tests, linting, and type checking."""
+    print("🚀 Running all checks for distage-py")
+    print("=" * 50)
+
+    checks = [
+        ("Tests", run_tests),
+        ("Linting", run_lint),
+        ("Type Checking", run_typecheck),
+    ]
+
+    results = {}
+    for name, func in checks:
+        print(f"\n{'=' * 20} {name} {'=' * 20}")
+        results[name] = func() == 0
+
+    # Summary
+    print(f"\n{'=' * 20} SUMMARY {'=' * 20}")
+    all_passed = True
+    for name, passed in results.items():
+        status = "✅ PASS" if passed else "❌ FAIL"
+        print(f"{name:<15} {status}")
+        if not passed:
+            all_passed = False
+
+    if all_passed:
+        print("\n🎉 All checks passed!")
+        return 0
+    else:
+        print("\n💥 Some checks failed. Please fix the issues above.")
+        return 1
+
+
+if __name__ == "__main__":
+    # Allow running directly for development
+    if len(sys.argv) > 1:
+        command = sys.argv[1]
+        if command == "test":
+            sys.exit(run_tests())
+        elif command == "lint":
+            sys.exit(run_lint())
+        elif command == "typecheck":
+            sys.exit(run_typecheck())
+        elif command == "check":
+            sys.exit(check_all())
+        else:
+            print(f"Unknown command: {command}")
+            print("Available commands: test, lint, typecheck, check")
+            sys.exit(1)
+    else:
+        print("Available commands: test, lint, typecheck, check")
+        print("Usage: python scripts.py <command>")
