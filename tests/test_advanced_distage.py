@@ -5,8 +5,8 @@ Unit tests for PyDistage advanced features: Roots and Activations.
 
 import unittest
 
-from distage_py import Activation, DIKey, Injector, ModuleDef, Roots, StandardAxis
-from distage_py.activation import Axis, AxisChoiceDef
+from izumi.distage import Activation, DIKey, Injector, ModuleDef, Roots, StandardAxis
+from izumi.distage.activation import Axis, AxisChoiceDef
 
 
 class TestRoots(unittest.TestCase):

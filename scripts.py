@@ -59,8 +59,8 @@ def run_typecheck() -> int:
     print("🔬 Running type checking")
 
     checks = [
-        (["uv", "run", "mypy", "distage_py/"], "MyPy type checking"),
-        (["uv", "run", "pyright", "distage_py/"], "Pyright type checking"),
+        (["uv", "run", "mypy", "src/izumi/distage/"], "MyPy type checking"),
+        (["uv", "run", "pyright", "src/izumi/distage/"], "Pyright type checking"),
     ]
 
     all_passed = True

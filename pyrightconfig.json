@@ -1,4 +1,4 @@
 {
-  "include": ["distage_py/"],
+  "include": ["src/izumi/distage/"],
   "reportUnnecessaryTypeIgnoreComment": "none"
 }

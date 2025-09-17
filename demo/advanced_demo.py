@@ -11,8 +11,8 @@ This demo demonstrates the corrected distage implementation with:
 
 from abc import ABC, abstractmethod
 
-from distage_py import Activation, Injector, ModuleDef, Roots, StandardAxis
-from distage_py.activation import Axis, AxisChoiceDef
+from izumi.distage import Activation, Injector, ModuleDef, Roots, StandardAxis
+from izumi.distage.activation import Axis, AxisChoiceDef
 
 
 # Define custom axis for our demo

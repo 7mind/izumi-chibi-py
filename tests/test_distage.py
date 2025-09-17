@@ -6,9 +6,9 @@ Unit tests for PyDistage library.
 import unittest
 from dataclasses import dataclass
 
-from distage_py import Injector, ModuleDef, Tag
-from distage_py.graph import CircularDependencyError, MissingBindingError
-from distage_py.introspection import SignatureIntrospector
+from izumi.distage import Injector, ModuleDef, Tag
+from izumi.distage.graph import CircularDependencyError, MissingBindingError
+from izumi.distage.introspection import SignatureIntrospector
 
 
 class TestBasicBinding(unittest.TestCase):

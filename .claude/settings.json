@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv:*)",
+      "Bash(python3:*)",
+      "Bash(grep:*)",
+      "Bash(PYTHONPATH=src uv run pytest -v tests/)",
+      "Bash(python -m pytest ../tests/ -v)",
+      "Bash(python -m ruff:*)",
+      "Bash(PYTHONPATH=src python -m ruff check src/izumi/distage/)",
+      "Bash(python:*)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

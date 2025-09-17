@@ -1,3 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/izumi"]
+
+[tool.hatch.build]
+exclude = [
+    "tests/",
+    "demo/",
+    "debug/",
+    "scripts.py",
+    "pyrightconfig.json",
+    "uv.lock",
+    ".venv/",
+    ".pytest_cache/",
+    "__pycache__/",
+]
+
 [project]
 name = "izumi"
 version = "0.1.0"
@@ -24,10 +44,13 @@ Issues = "https://github.com/7mind/izumi-chibi-py/issues"
 
 [dependency-groups]
 dev = [
+    "build>=1.0.0",
     "deptry>=0.23.1",
+    "hatchling>=1.27.0",
     "mypy>=1.17.1",
     "pyright>=1.1.405",
     "ruff>=0.12.10",
+    "twine>=6.0.0",
     #
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
@@ -109,8 +132,8 @@ ignore_missing_imports = false
 exclude_gitignore = true
 strict = true
 exclude = [
-    "tests",
-    "demo",
+    "tests/",
+    "demo/",
     "debug/",
 ]
 

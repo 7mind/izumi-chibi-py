@@ -14,7 +14,7 @@ This demo shows:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from distage_py import Injector, ModuleDef, Tag
+from izumi.distage import Injector, ModuleDef, Tag
 
 # Example domain: A simple web service with different components
 
