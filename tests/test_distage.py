@@ -6,7 +6,7 @@ Unit tests for Chibi Izumi library.
 import unittest
 from dataclasses import dataclass
 
-from izumi.distage import Injector, ModuleDef, PlannerInput, Tag
+from izumi.distage import Injector, ModuleDef, PlannerInput
 from izumi.distage.graph import CircularDependencyError, MissingBindingError
 from izumi.distage.introspection import SignatureIntrospector
 
@@ -116,20 +116,17 @@ class TestTaggedBindings(unittest.TestCase):
     """Test tagged bindings."""
 
     def test_tagged_binding(self):
-        """Test creating and resolving tagged bindings."""
-
-        prod_tag = Tag("prod")
-        test_tag = Tag("test")
+        """Test creating and resolving named bindings."""
 
         module = ModuleDef()
-        module.make(str).tagged(prod_tag).using("production-db")
-        module.make(str).tagged(test_tag).using("test-db")
+        module.make(str).named("prod").using("production-db")
+        module.make(str).named("test").using("test-db")
 
         injector = Injector()
         planner_input = PlannerInput([module])
 
-        prod_db = injector.get(planner_input, str, prod_tag)
-        test_db = injector.get(planner_input, str, test_tag)
+        prod_db = injector.get(planner_input, str, "prod")
+        test_db = injector.get(planner_input, str, "test")
 
         self.assertEqual(prod_db, "production-db")
         self.assertEqual(test_db, "test-db")

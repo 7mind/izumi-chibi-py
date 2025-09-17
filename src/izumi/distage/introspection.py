@@ -7,9 +7,9 @@ from __future__ import annotations
 import inspect
 from collections.abc import Callable
 from dataclasses import fields, is_dataclass
-from typing import Any, get_args, get_origin, get_type_hints
+from typing import Annotated, Any, get_args, get_origin, get_type_hints
 
-from .keys import DIKey
+from .keys import DIKey, Id
 
 
 class DependencyInfo:
@@ -21,12 +21,14 @@ class DependencyInfo:
         type_hint: type | str | Any,
         is_optional: bool = False,
         default_value: Any = inspect.Parameter.empty,
+        dependency_name: str | None = None,
     ):
         super().__init__()
         self.name = name
         self.type_hint = type_hint
         self.is_optional = is_optional
         self.default_value = default_value
+        self.dependency_name = dependency_name
 
     def __str__(self) -> str:
         optional_str = "?" if self.is_optional else ""
@@ -79,15 +81,35 @@ class SignatureIntrospector:
                 field.default if field.default != field.default_factory else inspect.Parameter.empty
             )
 
+            # Extract dependency name from Annotated types
+            type_hint, dependency_name = SignatureIntrospector._extract_name_from_annotated(
+                field.type
+            )
+
             dep = DependencyInfo(
                 name=field.name,
-                type_hint=field.type,
+                type_hint=type_hint,
                 is_optional=is_optional,
                 default_value=default_val,
+                dependency_name=dependency_name,
             )
             dependencies.append(dep)
 
         return dependencies
+
+    @staticmethod
+    def _extract_name_from_annotated(type_hint: Any) -> tuple[Any, str | None]:
+        """Extract the actual type and dependency name from Annotated type."""
+        if get_origin(type_hint) is Annotated:
+            args = get_args(type_hint)
+            if args:
+                actual_type = args[0]
+                # Look for Id annotation in the metadata
+                for metadata in args[1:]:
+                    if isinstance(metadata, Id):
+                        return actual_type, metadata.value
+                return actual_type, None
+        return type_hint, None
 
     @staticmethod
     def _extract_from_callable(
@@ -96,12 +118,14 @@ class SignatureIntrospector:
         """Extract dependencies from a callable."""
         try:
             signature = inspect.signature(func)
-            # Try to get type hints, but handle forward references gracefully
+            # Use raw annotations to preserve Annotated metadata
+            raw_annotations = getattr(func, "__annotations__", {})
+            # Try to get type hints for fallback, but handle forward references gracefully
             try:
-                type_hints = get_type_hints(func)
+                resolved_type_hints = get_type_hints(func)
             except (NameError, AttributeError):
                 # Fall back to raw annotations if type hints fail
-                type_hints = getattr(func, "__annotations__", {})
+                resolved_type_hints = raw_annotations
         except (ValueError, TypeError):
             return []
 
@@ -111,7 +135,17 @@ class SignatureIntrospector:
             if skip_self and param_name == "self":
                 continue
 
-            type_hint = type_hints.get(param_name, Any)
+            # First try raw annotations to preserve Annotated metadata
+            type_hint = raw_annotations.get(param_name, Any)
+
+            # Extract dependency name from Annotated types
+            type_hint, dependency_name = SignatureIntrospector._extract_name_from_annotated(
+                type_hint
+            )
+
+            # If we didn't get an Annotated type, fall back to resolved type hints
+            if dependency_name is None and param_name in resolved_type_hints:
+                type_hint = resolved_type_hints[param_name]
 
             # Handle string annotations (forward references)
             if isinstance(type_hint, str):
@@ -138,6 +172,7 @@ class SignatureIntrospector:
                 type_hint=type_hint,
                 is_optional=is_optional,
                 default_value=param.default,
+                dependency_name=dependency_name,
             )
             dependencies.append(dep)
 
@@ -180,6 +215,6 @@ class SignatureIntrospector:
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                key = DIKey(dep.type_hint, None)
+                key = DIKey(dep.type_hint, dep.dependency_name)
                 keys.append(key)
         return keys

@@ -15,7 +15,6 @@ from .keys import DIKey
 from .locator import Locator
 from .plan import Plan
 from .planner_input import PlannerInput
-from .tag import Tag
 
 T = TypeVar("T")
 
@@ -108,7 +107,7 @@ class Injector:
 
         return Locator(plan, instances)
 
-    def get(self, input: PlannerInput, target_type: type[T], tag: Tag | None = None) -> T:
+    def get(self, input: PlannerInput, target_type: type[T], name: str | None = None) -> T:
         """
         Convenience method to resolve a single type.
 
@@ -118,14 +117,14 @@ class Injector:
         Args:
             input: The PlannerInput containing modules, roots, and activation
             target_type: The type to resolve
-            tag: Optional tag to distinguish between different bindings
+            name: Optional name to distinguish between different bindings
 
         Returns:
             An instance of the requested type
         """
         plan = self.plan(input)
         locator = self.produce(plan)
-        return locator.get(target_type, tag)
+        return locator.get(target_type, name)
 
     def _build_graph(self, input: PlannerInput) -> DependencyGraph:
         """Build the dependency graph from PlannerInput."""
@@ -174,7 +173,7 @@ class Injector:
         binding = plan.graph.get_binding(key)
         if not binding:
             # Check if we have set bindings for this type
-            set_key = DIKey(key.target_type, key.tag)  # Create set key
+            set_key = DIKey(key.target_type, key.name)  # Create set key
             set_bindings = plan.graph.get_set_bindings(set_key)
             if set_bindings:
                 return self._resolve_set_binding_direct(set_bindings, resolve_fn)
@@ -241,7 +240,7 @@ class Injector:
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = DIKey(dep.type_hint, None)
+                dep_key = DIKey(dep.type_hint, dep.dependency_name)
                 kwargs[dep.name] = resolve_fn(dep_key)
             # For optional dependencies with defaults, let the class handle them
 
@@ -262,7 +261,7 @@ class Injector:
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = DIKey(dep.type_hint, None)
+                dep_key = DIKey(dep.type_hint, dep.dependency_name)
                 kwargs[dep.name] = resolve_fn(dep_key)
             # For optional dependencies with defaults, let the factory handle them
 

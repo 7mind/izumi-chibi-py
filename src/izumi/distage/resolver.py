@@ -61,7 +61,7 @@ class DependencyResolver:
         binding = self._graph.get_binding(key)
         if not binding:
             # Check if we have set bindings for this type
-            set_key = DIKey(key.target_type, key.tag)  # Create set key
+            set_key = DIKey(key.target_type, key.name)  # Create set key
             set_bindings = self._graph.get_set_bindings(set_key)
             if set_bindings:
                 return self._resolve_set_binding_direct(set_bindings)
@@ -122,7 +122,7 @@ class DependencyResolver:
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = DIKey(dep.type_hint, None)
+                dep_key = DIKey(dep.type_hint, dep.dependency_name)
                 kwargs[dep.name] = self.resolve(dep_key)
             # For optional dependencies with defaults, let the class handle them
 
@@ -143,7 +143,7 @@ class DependencyResolver:
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = DIKey(dep.type_hint, None)
+                dep_key = DIKey(dep.type_hint, dep.dependency_name)
                 kwargs[dep.name] = self.resolve(dep_key)
             # For optional dependencies with defaults, let the factory handle them
 

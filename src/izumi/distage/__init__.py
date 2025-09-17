@@ -19,7 +19,7 @@ from .bindings import Binding
 from .core import ModuleDef
 from .graph import DependencyGraph
 from .injector import Injector
-from .keys import DIKey
+from .keys import DIKey, Id
 from .locator import Locator
 from .plan import Plan
 from .planner_input import PlannerInput
@@ -69,6 +69,7 @@ __all__ = [
     "DependencyResolver",
     "Roots",
     "DIKey",
+    "Id",
     "Activation",
     "StandardAxis",
     "AxisChoiceDef",

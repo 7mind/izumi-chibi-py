@@ -14,7 +14,7 @@ This demo shows:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from izumi.distage import Injector, ModuleDef, PlannerInput, Tag
+from izumi.distage import Injector, ModuleDef, PlannerInput
 
 # Example domain: A simple web service with different components
 
@@ -132,9 +132,7 @@ def main():
     """Main demo function."""
     print("=== Chibi Izumi Demo ===\n")
 
-    # Define tags for different environments
-    Tag("prod")
-    test_tag = Tag("test")
+    # Define names for different environments
 
     # Production module
     prod_module = ModuleDef()
@@ -151,7 +149,7 @@ def main():
 
     # Test module (adds additional bindings)
     test_module = ModuleDef()
-    test_module.make(Database).tagged(test_tag).using(InMemoryDB())  # Instance binding
+    test_module.make(Database).named("test").using(InMemoryDB())  # Instance binding
 
     print("1. Production Environment:")
     print("-" * 30)
@@ -186,7 +184,7 @@ def main():
         print(f"Config: {config}")
 
         # This will use the test database
-        database = injector.get(planner_input, Database, test_tag)
+        database = injector.get(planner_input, Database, "test")
         result = database.query("SELECT * FROM users")
         print(f"Test DB result: {result}")
 

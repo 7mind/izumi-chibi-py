@@ -3,7 +3,9 @@
 Example demonstrating the new PlannerInput-based API that matches the original distage library.
 """
 
-from izumi.distage import Injector, ModuleDef, PlannerInput
+from typing import Annotated
+
+from izumi.distage import Id, Injector, ModuleDef, PlannerInput
 
 
 class Database:
@@ -72,6 +74,39 @@ def main():
     targeted_input = PlannerInput.target([module], UserService)
     targeted_plan = injector.plan(targeted_input)
     print(f"Targeted plan keys: {list(targeted_plan.keys())}")
+
+    # Option 5: Named dependencies with Id annotations
+    print("\n=== Option 5: Named Dependencies ===")
+
+    class ConfigurableService:
+        def __init__(
+            self,
+            api_key: Annotated[str, Id("api-key")],
+            timeout: Annotated[int, Id("timeout")],
+            database: Database,  # Regular dependency
+        ):
+            self.api_key = api_key
+            self.timeout = timeout
+            self.database = database
+
+        def make_api_call(self) -> str:
+            return f"API call with key '{self.api_key}' (timeout: {self.timeout}s) to {self.database.connection_string}"
+
+    # Create a new module with named bindings
+    named_module = ModuleDef()
+    named_module.make(Database).using(Database)
+    named_module.make(str).named("api-key").using("prod-api-key-123")
+    named_module.make(int).named("timeout").using(30)
+    named_module.make(ConfigurableService).using(ConfigurableService)
+
+    named_input = PlannerInput([named_module])
+    service = injector.get(named_input, ConfigurableService)
+    print(f"Named dependency result: {service.make_api_call()}")
+
+    # Demonstrate accessing named dependencies directly
+    api_key = injector.get(named_input, str, "api-key")
+    timeout = injector.get(named_input, int, "timeout")
+    print(f"Direct access - API Key: {api_key}, Timeout: {timeout}")
 
 
 if __name__ == "__main__":

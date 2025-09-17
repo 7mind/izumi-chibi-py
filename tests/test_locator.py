@@ -6,7 +6,7 @@ Unit tests for the new architecture with Injector, Plan, and Locator separation.
 import unittest
 from dataclasses import dataclass
 
-from izumi.distage import Injector, Locator, ModuleDef, Plan, PlannerInput, Tag
+from izumi.distage import Injector, Locator, ModuleDef, Plan, PlannerInput
 
 
 class TestLocator(unittest.TestCase):
@@ -291,22 +291,19 @@ class TestLocator(unittest.TestCase):
         self.assertGreater(len(execution_order), 0)
 
     def test_tagged_bindings_with_new_architecture(self):
-        """Test tagged bindings work with the new architecture."""
-
-        prod_tag = Tag("prod")
-        test_tag = Tag("test")
+        """Test named bindings work with the new architecture."""
 
         module = ModuleDef()
-        module.make(str).tagged(prod_tag).using("production-db")
-        module.make(str).tagged(test_tag).using("test-db")
+        module.make(str).named("prod").using("production-db")
+        module.make(str).named("test").using("test-db")
 
         injector = Injector()
         planner_input = PlannerInput([module])
         plan = injector.plan(planner_input)
         locator = Locator(plan)
 
-        prod_db = locator.get(str, prod_tag)
-        test_db = locator.get(str, test_tag)
+        prod_db = locator.get(str, "prod")
+        test_db = locator.get(str, "test")
 
         self.assertEqual(prod_db, "production-db")
         self.assertEqual(test_db, "test-db")

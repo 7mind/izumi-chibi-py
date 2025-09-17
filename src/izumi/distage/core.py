@@ -51,16 +51,22 @@ class BindingBuilder[T]:
     def __init__(self, target_type: type[T], module: ModuleDef):
         self._target_type = target_type
         self._module = module
-        self._tag: Tag | None = None
+        self._name: str | None = None
+        self._tag: Tag | None = None  # Keep for activation system
+
+    def named(self, name: str) -> BindingBuilder[T]:
+        """Add a name to this binding."""
+        self._name = name
+        return self
 
     def tagged(self, tag: Tag) -> BindingBuilder[T]:
-        """Add a tag to this binding."""
+        """Add a tag to this binding (for activation system)."""
         self._tag = tag
         return self
 
     def using(self, implementation: T | type[T] | Callable[[], T]) -> None:
         """Bind to a specific implementation, instance, or factory."""
-        key = DIKey(self._target_type, self._tag)
+        key = DIKey(self._target_type, self._name)
 
         # Convert tag to activation_tags if it's an AxisChoiceDef
         activation_tags: set[Any] = set()
