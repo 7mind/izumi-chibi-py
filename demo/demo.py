@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Demonstration of PyDistage - Python implementation of distage concepts.
+Demonstration of Chibi Izumi - Python implementation of distage concepts.
 
 This demo shows:
 1. Basic dependency injection with classes
@@ -130,7 +130,7 @@ def create_connection_string(config: Config) -> str:
 
 def main():
     """Main demo function."""
-    print("=== PyDistage Demo ===\n")
+    print("=== Chibi Izumi Demo ===\n")
 
     # Define tags for different environments
     Tag("prod")

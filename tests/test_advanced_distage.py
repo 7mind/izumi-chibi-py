@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for PyDistage advanced features: Roots and Activations.
+Unit tests for Chibi Izumi advanced features: Roots and Activations.
 """
 
 import unittest

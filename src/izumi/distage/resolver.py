@@ -9,9 +9,10 @@ from collections.abc import Callable
 from typing import Any
 
 from .activation import Activation
-from .bindings import Binding, BindingKey, BindingType
+from .bindings import Binding, BindingType
 from .graph import DependencyGraph
 from .introspection import SignatureIntrospector
+from .keys import DIKey
 from .roots import Roots
 
 
@@ -28,10 +29,10 @@ class DependencyResolver:
         self._graph = graph
         self._activation = activation
         self._roots = roots
-        self._instances: dict[BindingKey, Any] = {}
-        self._resolving: set[BindingKey] = set()
+        self._instances: dict[DIKey, Any] = {}
+        self._resolving: set[DIKey] = set()
 
-    def resolve(self, key: BindingKey) -> Any:
+    def resolve(self, key: DIKey) -> Any:
         """Resolve a dependency and return an instance."""
         # Check if already resolved
         if key in self._instances:
@@ -50,7 +51,7 @@ class DependencyResolver:
         finally:
             self._resolving.discard(key)
 
-    def _create_instance(self, key: BindingKey) -> Any:
+    def _create_instance(self, key: DIKey) -> Any:
         """Create an instance for the given key."""
         # Handle set bindings
         origin = getattr(key.target_type, "__origin__", None)
@@ -60,7 +61,7 @@ class DependencyResolver:
         binding = self._graph.get_binding(key)
         if not binding:
             # Check if we have set bindings for this type
-            set_key = BindingKey(key.target_type, key.tag)  # Create set key
+            set_key = DIKey(key.target_type, key.tag)  # Create set key
             set_bindings = self._graph.get_set_bindings(set_key)
             if set_bindings:
                 return self._resolve_set_binding_direct(set_bindings)
@@ -68,7 +69,7 @@ class DependencyResolver:
 
         return self._create_from_binding(binding)
 
-    def _resolve_set_binding(self, key: BindingKey) -> set[Any]:
+    def _resolve_set_binding(self, key: DIKey) -> set[Any]:
         """Resolve a set binding."""
         set_bindings = self._graph.get_set_bindings(key)
         return self._resolve_set_binding_direct(set_bindings)
@@ -121,7 +122,7 @@ class DependencyResolver:
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = BindingKey(dep.type_hint, None)
+                dep_key = DIKey(dep.type_hint, None)
                 kwargs[dep.name] = self.resolve(dep_key)
             # For optional dependencies with defaults, let the class handle them
 
@@ -142,7 +143,7 @@ class DependencyResolver:
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = BindingKey(dep.type_hint, None)
+                dep_key = DIKey(dep.type_hint, None)
                 kwargs[dep.name] = self.resolve(dep_key)
             # For optional dependencies with defaults, let the factory handle them
 
@@ -156,6 +157,6 @@ class DependencyResolver:
         """Get the number of resolved instances."""
         return len(self._instances)
 
-    def is_resolved(self, key: BindingKey) -> bool:
+    def is_resolved(self, key: DIKey) -> bool:
         """Check if a key has been resolved."""
         return key in self._instances

@@ -4,6 +4,8 @@
 - Always use explicit imports without "if TYPE_CHECKING" pattern
 - Use actual types instead of quoted class names in type annotations
 - Follow the existing code style and patterns in the project
+- Never add backward compatibility or legacy support code
+- Adhere to fail-fast approach, use assertions instead of conditional fallbacks
 
 ## Development Commands
 

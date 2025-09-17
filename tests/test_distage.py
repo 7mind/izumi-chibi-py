@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for PyDistage library.
+Unit tests for Chibi Izumi library.
 """
 
 import unittest
@@ -25,7 +25,11 @@ class TestBasicBinding(unittest.TestCase):
         module.make(Service).using(Service)
 
         injector = Injector(module)
-        service = injector.get(Service)
+
+        def get_service(service: Service) -> Service:
+            return service
+
+        service = injector.produce_run(get_service)
 
         self.assertIsInstance(service, Service)
         self.assertEqual(service.get_message(), "Hello World")

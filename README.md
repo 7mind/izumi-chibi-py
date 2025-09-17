@@ -1,10 +1,13 @@
-# PyDistage
+# Chibi Izumi
 
-A Python re-implementation of core concepts from Scala's [distage](https://izumi.7mind.io/distage/) dependency injection library.
+A Python re-implementation of some core concepts from Scala's [Izumi Project](https://github.com/7mind/izumi),
+`distage` dependency injection library in particular.
+
+The port was done by guiding Claude with thorough manual reviews.
 
 ## Features
 
-PyDistage provides a powerful, type-safe dependency injection framework with:
+`distage` provides a powerful, type-safe dependency injection framework with:
 
 - **DSL for defining bindings** - Fluent API for configuring dependencies
 - **Signature introspection** - Automatic extraction of dependency requirements from type hints
@@ -94,7 +97,7 @@ module.many(Handler).add(UserHandler).add(AdminHandler)
 
 ### Signature Introspection
 
-PyDistage automatically analyzes constructor signatures and type hints to determine dependencies:
+Chibi Izumi automatically analyzes constructor signatures and type hints to determine dependencies:
 
 ```python
 class UserService:
@@ -220,35 +223,9 @@ processor = injector.get(CommandProcessor)
 # processor.handlers contains instances of both UserHandler and AdminHandler
 ```
 
-## Project Structure
-
-```
-distage_py/
-├── __init__.py          # Main exports
-├── core.py              # ModuleDef, Injector, Tag classes
-├── bindings.py          # Binding definitions and types
-├── introspection.py     # Signature analysis utilities
-├── graph.py             # Dependency graph management
-└── resolver.py          # Dependency resolution engine
-```
-
-## Running Examples
-
-- **demo.py** - Basic demonstration of core features
-- **advanced_demo.py** - Advanced demonstration of roots and activations
-- **test_distage.py** - Unit tests covering basic functionality  
-- **test_advanced_distage.py** - Unit tests for roots and activations
-
-```bash
-python demo.py                    # Run basic demo
-python advanced_demo.py          # Run advanced demo with roots/activations  
-python test_distage.py           # Run basic tests
-python test_advanced_distage.py  # Run advanced tests
-```
-
 ## Architecture
 
-PyDistage follows these design principles from the original distage:
+Chibi Izumi follows these design principles from the original distage:
 
 1. **Compile-time safety** - Dependencies are validated at injector creation time
 2. **No runtime reflection** - Uses type hints and signature inspection
@@ -260,12 +237,6 @@ PyDistage follows these design principles from the original distage:
 
 This is a demo implementation with some simplifications compared to the full distage library:
 
-- Forward reference resolution is simplified
-- No support for higher-kinded types
+- No support for circular references
 - Limited lifecycle management
-- No built-in support for effect types (IO, ZIO, etc.)
 - Simplified error handling
-
-## Inspired By
-
-This project is inspired by [7mind's distage library](https://izumi.7mind.io/distage/) for Scala, which provides advanced dependency injection capabilities for functional programming patterns.

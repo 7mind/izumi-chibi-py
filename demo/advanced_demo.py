@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Advanced PyDistage Demo - showcasing Roots and Activations.
+Advanced Chibi Izumi Demo - showcasing Roots and Activations.
 
 This demo demonstrates the corrected distage implementation with:
 1. Roots for dependency tracing and garbage collection
@@ -141,7 +141,7 @@ class Application:
 
 def main():
     """Demonstrate advanced distage features."""
-    print("=== Advanced PyDistage Demo: Roots and Activations ===\n")
+    print("=== Advanced Chibi Izumi Demo: Roots and Activations ===\n")
 
     # Create modules with multiple implementations
     base_module = ModuleDef()

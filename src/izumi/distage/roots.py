@@ -4,37 +4,14 @@ Roots system for defining what should be instantiated from the dependency graph.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TypeVar
 
-from .bindings import BindingKey
-
-if TYPE_CHECKING:
-    from .graph import DependencyGraph
+from .graph import DependencyGraph
 
 T = TypeVar("T")
 
 
-@dataclass(frozen=True)
-class DIKey:
-    """A key that identifies a specific dependency in the object graph."""
-
-    target_type: type
-    tag: Any = None
-
-    @classmethod
-    def get(cls, target_type: type[T], tag: Any = None) -> DIKey:
-        """Create a DIKey for the given type and optional tag."""
-        return cls(target_type, tag)
-
-    def to_binding_key(self) -> BindingKey:
-        """Convert to a BindingKey."""
-        return BindingKey(self.target_type, self.tag)
-
-    def __str__(self) -> str:
-        tag_str = f" {self.tag}" if self.tag else ""
-        type_name = getattr(self.target_type, "__name__", str(self.target_type))
-        return f"DIKey[{type_name}{tag_str}]"
+from .keys import DIKey
 
 
 class Roots:
@@ -97,19 +74,18 @@ class RootsFinder:
     """Finds all dependencies reachable from the given roots."""
 
     @staticmethod
-    def find_reachable_keys(roots: Roots, graph: DependencyGraph) -> set[BindingKey]:
+    def find_reachable_keys(roots: Roots, graph: DependencyGraph) -> set[DIKey]:
         """Find all binding keys reachable from the roots."""
         if roots.is_everything():
             # Include all bindings
             return set(graph.get_all_bindings().keys())
 
-        visited: set[BindingKey] = set()
-        to_visit: set[BindingKey] = set()
+        visited: set[DIKey] = set()
+        to_visit: set[DIKey] = set()
 
         # Start with root keys
         for root_key in roots.keys:
-            binding_key = root_key.to_binding_key()
-            to_visit.add(binding_key)
+            to_visit.add(root_key)
 
         # Perform DFS to find all reachable dependencies
         while to_visit:
@@ -136,6 +112,5 @@ class RootsFinder:
             return
 
         for root_key in roots.keys:
-            binding_key = root_key.to_binding_key()
-            if not graph.get_binding(binding_key) and not graph.get_set_bindings(binding_key):
+            if not graph.get_binding(root_key) and not graph.get_set_bindings(root_key):
                 raise ValueError(f"Root key not found in graph: {root_key}")

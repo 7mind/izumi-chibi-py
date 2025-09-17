@@ -1,206 +1,105 @@
 """
-Core components for the PyDistage dependency injection framework.
+Core components for the Chibi Izumi dependency injection framework.
 """
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TypeVar
 
-from .activation import Activation, AxisChoiceDef
-from .bindings import Binding, BindingKey, BindingType
-from .graph import DependencyGraph
-from .resolver import DependencyResolver
-from .roots import Roots
+from .bindings import Binding, BindingType
+from .keys import DIKey
+from .tag import Tag
 
 T = TypeVar("T")
 
 
 @dataclass(frozen=True)
-class Tag:
-    """A tag for distinguishing between different bindings of the same type."""
-
-    name: str
-
-    def __str__(self) -> str:
-        return f"@{self.name}"
-
-
 class ModuleDef:
-    """DSL for defining dependency injection bindings."""
+    """
+    A module definition containing bindings for dependency injection.
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._bindings: list[Binding] = []
+    Modules are immutable collections of bindings that can be combined
+    to form a complete dependency injection configuration.
+    """
 
-    def make(self, target_type: type[T]) -> BindingBuilder[T]:
-        """Create a binding for the given type."""
-        return BindingBuilder(self, target_type)
+    bindings: list[Binding]
 
-    def many(self, target_type: type[T]) -> SetBindingBuilder[T]:
-        """Create a set binding for collecting multiple instances of the same type."""
-        return SetBindingBuilder(self, target_type)
-
-    def make_factory(self, factory_type: type[T]) -> FactoryBindingBuilder[T]:
-        """Create a factory binding."""
-        return FactoryBindingBuilder(self, factory_type)
+    def __init__(self):
+        # Use object.__setattr__ since we're frozen
+        object.__setattr__(self, "bindings", [])
 
     def add_binding(self, binding: Binding) -> None:
         """Add a binding to this module."""
-        self._bindings.append(binding)
+        # Since we're frozen, we need to create a new list
+        new_bindings = self.bindings + [binding]
+        object.__setattr__(self, "bindings", new_bindings)
 
-    @property
-    def bindings(self) -> list[Binding]:
-        """Get all bindings defined in this module."""
-        return self._bindings.copy()
+    def make(self, target_type: type[T]) -> BindingBuilder[T]:
+        """Create a binding builder for the given type."""
+        return BindingBuilder(target_type, self)
+
+    def many(self, target_type: type[T]) -> SetBindingBuilder[T]:
+        """Create a set binding builder for the given type."""
+        return SetBindingBuilder(target_type, self)
 
 
 class BindingBuilder[T]:
-    """Builder for creating individual bindings."""
+    """Builder for creating bindings."""
 
-    def __init__(
-        self,
-        module: ModuleDef,
-        target_type: type[T],
-        tag: Tag | None = None,
-        activation_tags: set[AxisChoiceDef] | None = None,
-    ) -> None:
-        super().__init__()
-        self._module = module
+    def __init__(self, target_type: type[T], module: ModuleDef):
         self._target_type = target_type
+        self._module = module
+        self._tag: Tag | None = None
+
+    def tagged(self, tag: Tag) -> BindingBuilder[T]:
+        """Add a tag to this binding."""
         self._tag = tag
-        self._activation_tags = activation_tags or set()
+        return self
 
-    def tagged(self, *tags: Tag | AxisChoiceDef) -> BindingBuilder[T]:
-        """Add tags to this binding (supports both old-style Tags and AxisChoiceDef)."""
-        new_tag = None
-        new_activation_tags = self._activation_tags.copy()
+    def using(self, implementation: T | type[T] | Callable[[], T]) -> None:
+        """Bind to a specific implementation, instance, or factory."""
+        key = DIKey(self._target_type, self._tag)
 
-        for tag in tags:
-            if isinstance(tag, Tag):
-                new_tag = tag
-            elif isinstance(tag, AxisChoiceDef):  # pyright: ignore[reportUnnecessaryIsInstance]
-                new_activation_tags.add(tag)
-
-        return BindingBuilder(self._module, self._target_type, new_tag, new_activation_tags)
-
-    def using(self, implementation: type[T] | T | Callable[..., T]) -> None:
-        """Bind to a specific implementation, instance, or factory function."""
-        key = BindingKey(self._target_type, self._tag)
-
-        if inspect.isclass(implementation):
-            binding = Binding(key, BindingType.CLASS, implementation, self._activation_tags)
-        elif callable(implementation):
-            binding = Binding(key, BindingType.FACTORY, implementation, self._activation_tags)
+        if isinstance(implementation, type):
+            # Class binding
+            binding = Binding(key, BindingType.CLASS, implementation)
+        elif callable(implementation) and not isinstance(implementation, type):
+            # Factory binding
+            binding = Binding(key, BindingType.FACTORY, implementation)
         else:
-            binding = Binding(key, BindingType.INSTANCE, implementation, self._activation_tags)
+            # Instance binding
+            binding = Binding(key, BindingType.INSTANCE, implementation)
 
         self._module.add_binding(binding)
-
-    def to(self, implementation_type: type[T]) -> None:
-        """Bind to a specific implementation type."""
-        self.using(implementation_type)
 
 
 class SetBindingBuilder[T]:
     """Builder for creating set bindings."""
 
-    def __init__(self, module: ModuleDef, target_type: type[T], tag: Tag | None = None):
-        super().__init__()
-        self._module = module
+    def __init__(self, target_type: type[T], module: ModuleDef):
         self._target_type = target_type
-        self._tag = tag
+        self._module = module
 
-    def add(self, implementation: type[T] | T | Callable[..., T]) -> SetBindingBuilder[T]:
-        """Add an implementation to the set."""
-        key = BindingKey(set[self._target_type], self._tag)  # type: ignore[name-defined]
-
-        if inspect.isclass(implementation) or callable(implementation):
-            binding = Binding(key, BindingType.SET_ELEMENT, implementation)
-        else:
-            binding = Binding(key, BindingType.SET_ELEMENT, implementation)
-
+    def add(self, instance: T) -> SetBindingBuilder[T]:
+        """Add an instance to the set."""
+        # Create a set binding key
+        key = DIKey(set[self._target_type], None)  # type: ignore[valid-type]
+        binding = Binding(key, BindingType.SET_ELEMENT, instance)
         self._module.add_binding(binding)
         return self
-
-    def ref(self, implementation_type: type[T]) -> SetBindingBuilder[T]:
-        """Add a reference to an existing binding to the set."""
-        return self.add(implementation_type)
 
 
 class FactoryBindingBuilder[T]:
     """Builder for creating factory bindings."""
 
-    def __init__(self, module: ModuleDef, factory_type: type[T]):
-        super().__init__()
-        self._module = module
+    def __init__(self, factory_type: type[T], module: ModuleDef):
         self._factory_type = factory_type
+        self._module = module
 
     def from_factory(self, factory_impl: type[T]) -> None:
         """Bind the factory to a specific implementation."""
-        key = BindingKey(self._factory_type, None)
+        key = DIKey(self._factory_type, None)
         binding = Binding(key, BindingType.FACTORY, factory_impl)
         self._module.add_binding(binding)
-
-
-class Injector:
-    """Main dependency injection container."""
-
-    def __init__(
-        self, *modules: ModuleDef, roots: Roots | None = None, activation: Activation | None = None
-    ):
-        super().__init__()
-        self._modules = modules
-        self._roots = roots or Roots.everything()
-        self._activation = activation or Activation.empty()
-        self._graph = self._build_graph()
-        self._resolver = DependencyResolver(self._graph, self._activation, self._roots)
-
-    def _build_graph(self) -> DependencyGraph:
-        """Build the dependency graph from all modules."""
-        graph = DependencyGraph()
-
-        # Add all bindings to the graph first
-        for module in self._modules:
-            for binding in module.bindings:
-                graph.add_binding(binding)
-
-        # Filter bindings based on activation
-        if not self._activation.choices:
-            # No activation specified, keep all bindings
-            pass
-        else:
-            # Filter bindings that don't match the activation
-            graph.filter_bindings_by_activation(self._activation)
-
-        graph.validate()
-
-        # Validate roots and perform garbage collection if needed
-        from .roots import RootsFinder
-
-        RootsFinder.validate_roots(self._roots, graph)
-
-        if not self._roots.is_everything():
-            # Perform garbage collection - only keep reachable bindings
-            reachable_keys = RootsFinder.find_reachable_keys(self._roots, graph)
-            graph.garbage_collect(reachable_keys)
-
-        return graph
-
-    def get(self, target_type: type[T], tag: Tag | None = None) -> T:
-        """Resolve and return an instance of the given type."""
-        key = BindingKey(target_type, tag)
-        return self._resolver.resolve(key)  # type: ignore[no-any-return]
-
-    def produce_run(self, target_type: type[T], tag: Tag | None = None) -> T:
-        """Resolve and return an instance, managing the full lifecycle."""
-        return self.get(target_type, tag)
-
-    @staticmethod
-    def produce(
-        modules: list[ModuleDef], roots: Roots, activation: Activation | None = None
-    ) -> Injector:
-        """Create an injector with specific roots and activation."""
-        return Injector(*modules, roots=roots, activation=activation)

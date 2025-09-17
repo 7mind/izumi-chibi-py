@@ -7,6 +7,7 @@ These scripts integrate with uv to run various checks and tests.
 
 import subprocess
 import sys
+from pathlib import Path
 
 
 def run_command(cmd: list[str], description: str) -> bool:
@@ -71,8 +72,39 @@ def run_typecheck() -> int:
     return 0 if all_passed else 1
 
 
+def run_demos() -> int:
+    """Run all demo scripts to ensure they work correctly."""
+    print("🎭 Running demo scripts")
+
+    demo_dir = Path("demo")
+    if not demo_dir.exists():
+        print("❌ Demo directory not found")
+        return 1
+
+    # Find all Python files in demo directory
+    demo_files = list(demo_dir.glob("*.py"))
+
+    if not demo_files:
+        print("⚠️  No demo files found in demo directory")
+        return 0
+
+    all_passed = True
+    for demo_file in sorted(demo_files):
+        # Skip files that are not meant to be executed directly
+        if demo_file.name.startswith("_"):
+            continue
+
+        cmd = ["uv", "run", "python", str(demo_file)]
+        description = f"Demo: {demo_file.name}"
+
+        if not run_command(cmd, description):
+            all_passed = False
+
+    return 0 if all_passed else 1
+
+
 def check_all() -> int:
-    """Run all checks: tests, linting, and type checking."""
+    """Run all checks: tests, linting, type checking, and demos."""
     print("🚀 Running all checks for distage-py")
     print("=" * 50)
 
@@ -80,6 +112,7 @@ def check_all() -> int:
         ("Tests", run_tests),
         ("Linting", run_lint),
         ("Type Checking", run_typecheck),
+        ("Demos", run_demos),
     ]
 
     results = {}
@@ -114,12 +147,14 @@ if __name__ == "__main__":
             sys.exit(run_lint())
         elif command == "typecheck":
             sys.exit(run_typecheck())
+        elif command == "demos":
+            sys.exit(run_demos())
         elif command == "check":
             sys.exit(check_all())
         else:
             print(f"Unknown command: {command}")
-            print("Available commands: test, lint, typecheck, check")
+            print("Available commands: test, lint, typecheck, demos, check")
             sys.exit(1)
     else:
-        print("Available commands: test, lint, typecheck, check")
+        print("Available commands: test, lint, typecheck, demos, check")
         print("Usage: python scripts.py <command>")

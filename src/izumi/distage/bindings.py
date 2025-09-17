@@ -1,5 +1,5 @@
 """
-Binding definitions and types for PyDistage.
+Binding definitions and types for Chibi Izumi.
 """
 
 from __future__ import annotations
@@ -21,27 +21,15 @@ class BindingType(Enum):
     SET_ELEMENT = "set_element"
 
 
-@dataclass(frozen=True)
-class BindingKey:
-    """Unique key identifying a binding."""
-
-    target_type: type
-    tag: Any | None = None  # Use Any to avoid circular import
-
-    def __str__(self) -> str:
-        tag_str = f" {self.tag}" if self.tag else ""
-        type_name = getattr(self.target_type, "__name__", str(self.target_type))
-        return f"{type_name}{tag_str}"
-
-    def __hash__(self) -> int:
-        return hash((self.target_type, self.tag))
+# Import DIKey to use as the binding key
+from .keys import DIKey
 
 
 @dataclass(frozen=True)
 class Binding:
     """A dependency injection binding."""
 
-    key: BindingKey
+    key: DIKey
     binding_type: BindingType
     implementation: type | Any | Callable[..., Any]
     activation_tags: set[Any] | None = None  # Use Any to avoid circular import issues

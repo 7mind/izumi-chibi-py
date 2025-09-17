@@ -8,14 +8,15 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 
 from .activation import Activation
-from .bindings import Binding, BindingKey, BindingType
+from .bindings import Binding, BindingType
 from .introspection import SignatureIntrospector
+from .keys import DIKey
 
 
 class CircularDependencyError(Exception):
     """Raised when circular dependencies are detected."""
 
-    def __init__(self, cycle: list[BindingKey]):
+    def __init__(self, cycle: list[DIKey]):
         self.cycle = cycle
         cycle_str = " -> ".join(str(key) for key in cycle)
         super().__init__(f"Circular dependency detected: {cycle_str}")
@@ -24,7 +25,7 @@ class CircularDependencyError(Exception):
 class MissingBindingError(Exception):
     """Raised when a required binding is not found."""
 
-    def __init__(self, key: BindingKey, dependent: BindingKey | None = None):
+    def __init__(self, key: DIKey, dependent: DIKey | None = None):
         self.key = key
         self.dependent = dependent
         msg = f"No binding found for {key}"
@@ -37,10 +38,10 @@ class MissingBindingError(Exception):
 class GraphNode:
     """A node in the dependency graph."""
 
-    key: BindingKey
+    key: DIKey
     binding: Binding
-    dependencies: list[BindingKey]
-    dependents: set[BindingKey]
+    dependencies: list[DIKey]
+    dependents: set[DIKey]
 
     def __post_init__(self) -> None:
         self.dependents = set()
@@ -51,10 +52,10 @@ class DependencyGraph:
 
     def __init__(self) -> None:
         super().__init__()
-        self._bindings: dict[BindingKey, Binding] = {}
-        self._alternative_bindings: dict[BindingKey, list[Binding]] = defaultdict(list)
-        self._nodes: dict[BindingKey, GraphNode] = {}
-        self._set_bindings: dict[BindingKey, list[Binding]] = defaultdict(list)
+        self._bindings: dict[DIKey, Binding] = {}
+        self._alternative_bindings: dict[DIKey, list[Binding]] = defaultdict(list)
+        self._nodes: dict[DIKey, GraphNode] = {}
+        self._set_bindings: dict[DIKey, list[Binding]] = defaultdict(list)
         self._validated = False
 
     def add_binding(self, binding: Binding) -> None:
@@ -71,19 +72,19 @@ class DependencyGraph:
 
         self._validated = False
 
-    def get_binding(self, key: BindingKey) -> Binding | None:
+    def get_binding(self, key: DIKey) -> Binding | None:
         """Get a binding by key."""
         return self._bindings.get(key)
 
-    def get_set_bindings(self, key: BindingKey) -> list[Binding]:
+    def get_set_bindings(self, key: DIKey) -> list[Binding]:
         """Get all set bindings for a key."""
         return self._set_bindings.get(key, [])
 
-    def get_all_bindings(self) -> dict[BindingKey, Binding]:
+    def get_all_bindings(self) -> dict[DIKey, Binding]:
         """Get all regular bindings."""
         return self._bindings.copy()
 
-    def get_node(self, key: BindingKey) -> GraphNode | None:
+    def get_node(self, key: DIKey) -> GraphNode | None:
         """Get a graph node by key."""
         return self._nodes.get(key)
 
@@ -114,7 +115,7 @@ class DependencyGraph:
                 if dep_node:
                     dep_node.dependents.add(node.key)
 
-    def _extract_dependencies(self, binding: Binding) -> list[BindingKey]:
+    def _extract_dependencies(self, binding: Binding) -> list[DIKey]:
         """Extract dependency keys from a binding."""
         if binding.binding_type == BindingType.INSTANCE:
             return []
@@ -139,10 +140,10 @@ class DependencyGraph:
         GRAY = 1  # Currently being processed
         BLACK = 2  # Completely processed
 
-        colors: dict[BindingKey, int] = defaultdict(lambda: WHITE)
-        parent: dict[BindingKey, BindingKey | None] = {}
+        colors: dict[DIKey, int] = defaultdict(lambda: WHITE)
+        parent: dict[DIKey, DIKey | None] = {}
 
-        def dfs(key: BindingKey, path: list[BindingKey]) -> None:
+        def dfs(key: DIKey, path: list[DIKey]) -> None:
             if colors[key] == GRAY:
                 # Found a back edge - circular dependency
                 cycle_start = path.index(key)
@@ -170,12 +171,12 @@ class DependencyGraph:
             if colors[key] == WHITE:
                 dfs(key, [])
 
-    def get_topological_order(self) -> list[BindingKey]:
+    def get_topological_order(self) -> list[DIKey]:
         """Get a topological ordering of the dependency graph."""
         if not self._validated:
             self.validate()
 
-        in_degree: dict[BindingKey, int] = defaultdict(int)
+        in_degree: dict[DIKey, int] = defaultdict(int)
 
         # Calculate in-degrees
         for node in self._nodes.values():
@@ -184,12 +185,12 @@ class DependencyGraph:
                     in_degree[dep_key] += 1
 
         # Initialize queue with nodes that have no dependencies
-        queue: deque[BindingKey] = deque()
+        queue: deque[DIKey] = deque()
         for key in self._nodes:
             if in_degree[key] == 0:
                 queue.append(key)
 
-        result: list[BindingKey] = []
+        result: list[DIKey] = []
 
         while queue:
             key = queue.popleft()
@@ -247,7 +248,7 @@ class DependencyGraph:
         matching_bindings.sort(key=lambda b: len(b.activation_tags or set()), reverse=True)  # pyright: ignore[reportUnknownArgumentType]
         return matching_bindings[0]
 
-    def garbage_collect(self, reachable_keys: set[BindingKey]) -> None:
+    def garbage_collect(self, reachable_keys: set[DIKey]) -> None:
         """Remove unreachable bindings from the graph."""
         # Filter main bindings
         filtered_bindings = {

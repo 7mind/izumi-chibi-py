@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import fields, is_dataclass
 from typing import Any, get_args, get_origin, get_type_hints
 
-from .bindings import BindingKey
+from .keys import DIKey
 
 
 class DependencyInfo:
@@ -167,9 +167,9 @@ class SignatureIntrospector:
         return type_hint
 
     @staticmethod
-    def get_binding_keys(dependencies: list[DependencyInfo]) -> list[BindingKey]:
+    def get_binding_keys(dependencies: list[DependencyInfo]) -> list[DIKey]:
         """Convert dependency information to binding keys."""
-        keys: list[BindingKey] = []
+        keys: list[DIKey] = []
         for dep in dependencies:
             # Skip dependencies with 'Any' type hint as they're usually introspection failures
             if dep.type_hint == Any:
@@ -180,6 +180,6 @@ class SignatureIntrospector:
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                key = BindingKey(dep.type_hint, None)
+                key = DIKey(dep.type_hint, None)
                 keys.append(key)
         return keys

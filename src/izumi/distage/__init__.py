@@ -1,5 +1,5 @@
 """
-PyDistage - A Python re-implementation of core concepts from Scala's distage library.
+Chibi Izumi - A Python re-implementation of core concepts from Scala's distage library.
 
 This library provides dependency injection with:
 - DSL for defining bindings
@@ -15,11 +15,17 @@ from beartype import BeartypeConf, beartype
 from beartype.roar import BeartypeCallHintViolation
 
 from .activation import Activation, AxisChoiceDef, StandardAxis
-from .bindings import Binding, BindingKey
-from .core import Injector, ModuleDef, Tag
+from .bindings import Binding
+from .core import ModuleDef
 from .graph import DependencyGraph
+from .injector import Injector
+from .keys import DIKey
+from .locator import Locator
+from .plan import Plan
+from .planner_input import PlannerInput
 from .resolver import DependencyResolver
-from .roots import DIKey, Roots
+from .roots import Roots
+from .tag import Tag
 
 # Configure beartype to throw errors for type violations
 _beartype_conf = BeartypeConf(
@@ -43,6 +49,10 @@ def _safe_beartype_class(cls: type) -> type:
 # Apply beartype to key classes that users interact with most
 Injector = _safe_beartype_class(Injector)  # type: ignore[misc,assignment]
 ModuleDef = _safe_beartype_class(ModuleDef)  # type: ignore[misc,assignment]
+Plan = _safe_beartype_class(Plan)  # type: ignore[misc,assignment]
+PlannerInput = _safe_beartype_class(PlannerInput)  # type: ignore[misc,assignment]
+Locator = _safe_beartype_class(Locator)  # type: ignore[misc,assignment]
+Tag = _safe_beartype_class(Tag)  # type: ignore[misc,assignment]
 
 # Note: We avoid applying beartype to classes with complex generics or forward references
 # to prevent the issues we saw earlier
@@ -50,9 +60,11 @@ ModuleDef = _safe_beartype_class(ModuleDef)  # type: ignore[misc,assignment]
 __all__ = [
     "ModuleDef",
     "Injector",
+    "Plan",
+    "PlannerInput",
+    "Locator",
     "Tag",
     "Binding",
-    "BindingKey",
     "DependencyGraph",
     "DependencyResolver",
     "Roots",
