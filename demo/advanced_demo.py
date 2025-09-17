@@ -147,27 +147,29 @@ def main():
     base_module = ModuleDef()
 
     # Database bindings with different modes
-    base_module.make(Database).tagged(StandardAxis.Mode.Prod).using(PostgresDatabase)
-    base_module.make(Database).tagged(StandardAxis.Mode.Test).using(InMemoryDatabase)
-    base_module.make(Database).tagged(StandardAxis.Repo.Dummy).using(DummyDatabase)
+    base_module.make(Database).tagged(StandardAxis.Mode.Prod).using().type(PostgresDatabase)
+    base_module.make(Database).tagged(StandardAxis.Mode.Test).using().type(InMemoryDatabase)
+    base_module.make(Database).tagged(StandardAxis.Repo.Dummy).using().type(DummyDatabase)
 
     # Message service bindings
-    base_module.make(MessageService).tagged(StandardAxis.World.Real).using(EmailService)
-    base_module.make(MessageService).tagged(StandardAxis.World.Mock).using(MockMessageService)
+    base_module.make(MessageService).tagged(StandardAxis.World.Real).using().type(EmailService)
+    base_module.make(MessageService).tagged(StandardAxis.World.Mock).using().type(
+        MockMessageService
+    )
 
     # Logger bindings
-    base_module.make(Logger).tagged(StandardAxis.Mode.Prod).using(FileLogger)
-    base_module.make(Logger).tagged(StandardAxis.Mode.Test).using(ConsoleLogger)
+    base_module.make(Logger).tagged(StandardAxis.Mode.Prod).using().type(FileLogger)
+    base_module.make(Logger).tagged(StandardAxis.Mode.Test).using().type(ConsoleLogger)
 
     # Greeter bindings with custom axis
-    base_module.make(NormalGreeter).tagged(Style.Normal).using(NormalGreeter)
-    base_module.make(AllCapsGreeter).tagged(Style.AllCaps).using(AllCapsGreeter)
+    base_module.make(NormalGreeter).tagged(Style.Normal).using().type(NormalGreeter)
+    base_module.make(AllCapsGreeter).tagged(Style.AllCaps).using().type(AllCapsGreeter)
 
     # Application binding
-    base_module.make(Application).using(Application)
+    base_module.make(Application).using().type(Application)
 
     # Unused service (should be garbage collected when using roots)
-    base_module.make(UnusedService).using(UnusedService)
+    base_module.make(UnusedService).using().type(UnusedService)
 
     print("1. Production Configuration:")
     print("-" * 40)

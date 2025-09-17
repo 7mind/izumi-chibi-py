@@ -9,10 +9,11 @@ from collections.abc import Callable
 from typing import Any
 
 from .activation import Activation
-from .bindings import Binding, BindingType
+from .bindings import Binding
 from .graph import DependencyGraph
+from .implementation import ImplClass, ImplFunc, ImplSetElement, ImplValue
 from .introspection import SignatureIntrospector
-from .keys import DIKey
+from .keys import DIKey, SetElementKey
 from .roots import Roots
 
 
@@ -86,26 +87,24 @@ class DependencyResolver:
 
     def _create_from_binding(self, binding: Binding) -> Any:
         """Create an instance from a specific binding."""
-        if binding.binding_type == BindingType.INSTANCE:
-            return binding.implementation
+        impl = binding.implementation
 
-        elif binding.binding_type == BindingType.FACTORY:
-            return self._call_factory(binding.implementation)
-
-        elif binding.binding_type == BindingType.CLASS:
-            return self._instantiate_class(binding.implementation)
-
-        elif binding.binding_type == BindingType.SET_ELEMENT:
-            # For set elements, treat them like regular bindings
-            if inspect.isclass(binding.implementation):
-                return self._instantiate_class(binding.implementation)
-            elif callable(binding.implementation):
-                return self._call_factory(binding.implementation)
+        if isinstance(impl, ImplValue):
+            return impl.value
+        elif isinstance(impl, ImplClass):
+            return self._instantiate_class(impl.cls)
+        elif isinstance(impl, ImplFunc):
+            return self._call_factory(impl.func)
+        elif isinstance(impl, ImplSetElement):
+            # For set elements, we need to create a proper key for the wrapped implementation
+            if isinstance(binding.key, SetElementKey):
+                element_key = binding.key.element_key
             else:
-                return binding.implementation
-
+                element_key = binding.key
+            # Delegate to the wrapped implementation
+            return self._create_from_binding(Binding(element_key, impl.impl))
         else:
-            raise ValueError(f"Unknown binding type: {binding.binding_type}")
+            raise ValueError(f"Unknown implementation type: {type(impl)}")
 
     def _instantiate_class(self, cls: type | Any | Callable[..., Any]) -> Any:
         """Instantiate a class by resolving its dependencies."""

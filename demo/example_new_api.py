@@ -27,8 +27,8 @@ class UserService:
 def main():
     # Define the module with bindings
     module = ModuleDef()
-    module.make(Database).using(Database)
-    module.make(UserService).using(UserService)
+    module.make(Database).using().type(Database)
+    module.make(UserService).using().type(UserService)
 
     # Create PlannerInput - this is immutable and contains all configuration
     planner_input = PlannerInput([module])
@@ -94,10 +94,10 @@ def main():
 
     # Create a new module with named bindings
     named_module = ModuleDef()
-    named_module.make(Database).using(Database)
-    named_module.make(str).named("api-key").using("prod-api-key-123")
-    named_module.make(int).named("timeout").using(30)
-    named_module.make(ConfigurableService).using(ConfigurableService)
+    named_module.make(Database).using().type(Database)
+    named_module.make(str).named("api-key").using().value("prod-api-key-123")
+    named_module.make(int).named("timeout").using().value(30)
+    named_module.make(ConfigurableService).using().type(ConfigurableService)
 
     named_input = PlannerInput([named_module])
     service = injector.get(named_input, ConfigurableService)

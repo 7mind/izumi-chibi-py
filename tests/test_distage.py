@@ -22,7 +22,7 @@ class TestBasicBinding(unittest.TestCase):
                 return "Hello World"
 
         module = ModuleDef()
-        module.make(Service).using(Service)
+        module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -45,7 +45,7 @@ class TestBasicBinding(unittest.TestCase):
         config_instance = Config("test-config")
 
         module = ModuleDef()
-        module.make(Config).using(config_instance)
+        module.make(Config).using().value(config_instance)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -61,7 +61,7 @@ class TestBasicBinding(unittest.TestCase):
             return "factory-created"
 
         module = ModuleDef()
-        module.make(str).using(create_service)
+        module.make(str).using().func(create_service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -85,8 +85,8 @@ class TestDependencyInjection(unittest.TestCase):
                 self.database = database
 
         module = ModuleDef()
-        module.make(Database).using(Database("test-db"))
-        module.make(Service).using(Service)
+        module.make(Database).using().value(Database("test-db"))
+        module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -103,7 +103,7 @@ class TestDependencyInjection(unittest.TestCase):
                 self.config = config or "default"
 
         module = ModuleDef()
-        module.make(OptionalService).using(OptionalService)
+        module.make(OptionalService).using().type(OptionalService)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -119,8 +119,8 @@ class TestTaggedBindings(unittest.TestCase):
         """Test creating and resolving named bindings."""
 
         module = ModuleDef()
-        module.make(str).named("prod").using("production-db")
-        module.make(str).named("test").using("test-db")
+        module.make(str).named("prod").using().value("production-db")
+        module.make(str).named("test").using().value("test-db")
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -157,7 +157,7 @@ class TestSetBindings(unittest.TestCase):
 
         module = ModuleDef()
         module.many(Handler).add(handler1).add(handler2)
-        module.make(Service).using(Service)
+        module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -232,8 +232,8 @@ class TestGraphValidation(unittest.TestCase):
                 self.a = a
 
         module = ModuleDef()
-        module.make(A).using(A)
-        module.make(B).using(B)
+        module.make(A).using().type(A)
+        module.make(B).using().type(B)
 
         # Either circular dependency or missing dependency should be caught
         with self.assertRaises((CircularDependencyError, MissingBindingError)):
@@ -252,7 +252,7 @@ class TestGraphValidation(unittest.TestCase):
                 self.missing = missing
 
         module = ModuleDef()
-        module.make(Service).using(Service)
+        module.make(Service).using().type(Service)
 
         with self.assertRaises(MissingBindingError):
             injector = Injector()
@@ -276,12 +276,12 @@ class TestMultipleModules(unittest.TestCase):
 
         # Base module
         base_module = ModuleDef()
-        base_module.make(str).using("localhost")  # Default host
-        base_module.make(Database).using(Database)
+        base_module.make(str).using().value("localhost")  # Default host
+        base_module.make(Database).using().type(Database)
 
         # Extension module
         ext_module = ModuleDef()
-        ext_module.make(Service).using(Service)
+        ext_module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([base_module, ext_module])

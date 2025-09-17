@@ -132,15 +132,15 @@ def main():
     module = ModuleDef()
 
     # Application metadata
-    module.make(str).named("app-name").using("MultiDB Application")
-    module.make(str).named("app-version").using("2.0.0")
+    module.make(str).named("app-name").using().value("MultiDB Application")
+    module.make(str).named("app-version").using().value("2.0.0")
 
     # Cache configuration
-    module.make(int).named("cache-ttl").using(300)  # 5 minutes
-    module.make(int).named("batch-size").using(1000)
+    module.make(int).named("cache-ttl").using().value(300)  # 5 minutes
+    module.make(int).named("batch-size").using().value(1000)
 
     # Primary database configuration (using explicit values)
-    module.make(DatabaseConfig).named("primary-config").using(
+    module.make(DatabaseConfig).named("primary-config").using().value(
         DatabaseConfig(
             host="primary-db.example.com",
             port=5432,
@@ -151,12 +151,12 @@ def main():
     )
 
     # Replica database configuration (using factory function with named deps)
-    module.make(str).named("host").using("replica-db.example.com")
-    module.make(int).named("port").using(5432)
-    module.make(str).named("database").using("users_replica")
-    module.make(str).named("username").using("readonly_user")
-    module.make(str).named("password").using("readonly_pass")
-    module.make(DatabaseConfig).named("replica-config").using(create_database_config)
+    module.make(str).named("host").using().value("replica-db.example.com")
+    module.make(int).named("port").using().value(5432)
+    module.make(str).named("database").using().value("users_replica")
+    module.make(str).named("username").using().value("readonly_user")
+    module.make(str).named("password").using().value("readonly_pass")
+    module.make(DatabaseConfig).named("replica-config").using().func(create_database_config)
 
     # Analytics database configuration (direct instance)
     analytics_config = DatabaseConfig(
@@ -166,7 +166,7 @@ def main():
         username="analytics_user",
         password="analytics_pass",
     )
-    module.make(DatabaseConfig).named("analytics-config").using(analytics_config)
+    module.make(DatabaseConfig).named("analytics-config").using().value(analytics_config)
 
     # Database connections (each gets a different config)
     def create_primary_connection(
@@ -184,14 +184,14 @@ def main():
     ) -> DatabaseConnection:
         return DatabaseConnection(config)
 
-    module.make(DatabaseConnection).named("primary-db").using(create_primary_connection)
-    module.make(DatabaseConnection).named("replica-db").using(create_replica_connection)
-    module.make(DatabaseConnection).named("analytics-db").using(create_analytics_connection)
+    module.make(DatabaseConnection).named("primary-db").using().func(create_primary_connection)
+    module.make(DatabaseConnection).named("replica-db").using().func(create_replica_connection)
+    module.make(DatabaseConnection).named("analytics-db").using().func(create_analytics_connection)
 
     # Services
-    module.make(UserService).using(UserService)
-    module.make(ReportService).using(ReportService)
-    module.make(Application).using(Application)
+    module.make(UserService).using().type(UserService)
+    module.make(ReportService).using().type(ReportService)
+    module.make(Application).using().type(Application)
 
     print("1. Creating application with named dependencies...")
     print("-" * 50)

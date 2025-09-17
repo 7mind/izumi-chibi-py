@@ -136,20 +136,22 @@ def main():
 
     # Production module
     prod_module = ModuleDef()
-    prod_module.make(Config).using(Config("ProductionApp", debug=False))
-    prod_module.make(str).using(create_connection_string)  # Connection string factory
-    prod_module.make(Database).using(PostgresDB)  # Class binding - will resolve constructor deps
-    prod_module.make(Logger).using(Logger)  # Class binding
-    prod_module.make(UserService).using(UserService)
+    prod_module.make(Config).using().value(Config("ProductionApp", debug=False))
+    prod_module.make(str).using().func(create_connection_string)  # Connection string factory
+    prod_module.make(Database).using().type(
+        PostgresDB
+    )  # Class binding - will resolve constructor deps
+    prod_module.make(Logger).using().type(Logger)  # Class binding
+    prod_module.make(UserService).using().type(UserService)
 
     # Set bindings for commands
     prod_module.many(Command).add(StartCommand)
     prod_module.many(Command).add(StatusCommand)
-    prod_module.make(CommandExecutor).using(CommandExecutor)
+    prod_module.make(CommandExecutor).using().type(CommandExecutor)
 
     # Test module (adds additional bindings)
     test_module = ModuleDef()
-    test_module.make(Database).named("test").using(InMemoryDB())  # Instance binding
+    test_module.make(Database).named("test").using().value(InMemoryDB())  # Instance binding
 
     print("1. Production Environment:")
     print("-" * 30)
@@ -205,8 +207,8 @@ def main():
         def __init__(self, a: A):
             self.a = a
 
-    circular_module.make(A).using(A)
-    circular_module.make(B).using(B)
+    circular_module.make(A).using().type(A)
+    circular_module.make(B).using().type(B)
 
     try:
         injector = Injector()
@@ -228,7 +230,7 @@ def main():
             self.missing_service = missing_service
 
     incomplete_module = ModuleDef()
-    incomplete_module.make(ServiceWithMissingDep).using(ServiceWithMissingDep)
+    incomplete_module.make(ServiceWithMissingDep).using().type(ServiceWithMissingDep)
 
     try:
         injector = Injector()

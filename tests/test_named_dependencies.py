@@ -33,8 +33,8 @@ class TestNamedDependencies(unittest.TestCase):
     def test_named_binding_with_module_def(self):
         """Test creating named bindings using ModuleDef."""
         module = ModuleDef()
-        module.make(str).named("primary").using("primary-string")
-        module.make(str).named("secondary").using("secondary-string")
+        module.make(str).named("primary").using().value("primary-string")
+        module.make(str).named("secondary").using().value("secondary-string")
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -56,9 +56,9 @@ class TestNamedDependencies(unittest.TestCase):
                 self.port = port
 
         module = ModuleDef()
-        module.make(str).named("db-host").using("localhost")
-        module.make(int).named("db-port").using(5432)
-        module.make(DatabaseService).using(DatabaseService)
+        module.make(str).named("db-host").using().value("localhost")
+        module.make(int).named("db-port").using().value(5432)
+        module.make(DatabaseService).using().type(DatabaseService)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -78,10 +78,10 @@ class TestNamedDependencies(unittest.TestCase):
             return f"postgresql://{host}:{port}/{database}"
 
         module = ModuleDef()
-        module.make(str).named("db-host").using("localhost")
-        module.make(int).named("db-port").using(5432)
-        module.make(str).named("db-name").using("myapp")
-        module.make(str).named("connection").using(create_connection_string)
+        module.make(str).named("db-host").using().value("localhost")
+        module.make(int).named("db-port").using().value(5432)
+        module.make(str).named("db-name").using().value("myapp")
+        module.make(str).named("connection").using().func(create_connection_string)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -99,9 +99,9 @@ class TestNamedDependencies(unittest.TestCase):
             debug: bool = False
 
         module = ModuleDef()
-        module.make(str).named("server-host").using("0.0.0.0")
-        module.make(int).named("server-port").using(8080)
-        module.make(Config).using(Config)
+        module.make(str).named("server-host").using().value("0.0.0.0")
+        module.make(int).named("server-port").using().value(8080)
+        module.make(Config).using().type(Config)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -130,10 +130,10 @@ class TestNamedDependencies(unittest.TestCase):
                 self.timeout = timeout
 
         module = ModuleDef()
-        module.make(Logger).using(Logger("default-logger"))
-        module.make(str).named("api-key").using("secret-key-123")
-        module.make(int).named("timeout").using(30)
-        module.make(Service).using(Service)
+        module.make(Logger).using().value(Logger("default-logger"))
+        module.make(str).named("api-key").using().value("secret-key-123")
+        module.make(int).named("timeout").using().value(30)
+        module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -154,9 +154,9 @@ class TestNamedDependencies(unittest.TestCase):
             return f"App '{app_name}' connecting to DB: {database_url}, Redis: {redis_url}"
 
         module = ModuleDef()
-        module.make(str).named("db-url").using("postgresql://localhost/app")
-        module.make(str).named("redis-url").using("redis://localhost:6379")
-        module.make(str).using("MyApplication")  # Unnamed binding
+        module.make(str).named("db-url").using().value("postgresql://localhost/app")
+        module.make(str).named("redis-url").using().value("redis://localhost:6379")
+        module.make(str).using().value("MyApplication")  # Unnamed binding
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -174,8 +174,8 @@ class TestNamedDependencies(unittest.TestCase):
             return f"Worker {worker_id} processing {batch_size} items"
 
         module = ModuleDef()
-        module.make(str).named("worker-id").using("worker-001")
-        module.make(int).named("batch-size").using(100)
+        module.make(str).named("worker-id").using().value("worker-001")
+        module.make(int).named("batch-size").using().value(100)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -193,7 +193,7 @@ class TestNamedDependencies(unittest.TestCase):
                 self.config = config
 
         module = ModuleDef()
-        module.make(Service).using(Service)
+        module.make(Service).using().type(Service)
         # Note: not binding the "missing-config" name
 
         injector = Injector()
@@ -221,9 +221,9 @@ class TestNamedDependencies(unittest.TestCase):
                 self.optional = optional
 
         module = ModuleDef()
-        module.make(str).named("required").using("required-value")
+        module.make(str).named("required").using().value("required-value")
         # Note: not binding "optional" - should use default
-        module.make(Service).using(Service)
+        module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -260,14 +260,14 @@ class TestNamedDependencies(unittest.TestCase):
                 self.version = version
 
         module = ModuleDef()
-        module.make(str).named("db-url").using("postgresql://localhost/users")
-        module.make(str).named("cache-url").using("redis://localhost:6379")
-        module.make(str).named("app-name").using("UserApp")
-        module.make(str).named("app-version").using("1.0.0")
-        module.make(Database).using(Database)
-        module.make(Cache).using(Cache)
-        module.make(UserService).using(UserService)
-        module.make(Application).using(Application)
+        module.make(str).named("db-url").using().value("postgresql://localhost/users")
+        module.make(str).named("cache-url").using().value("redis://localhost:6379")
+        module.make(str).named("app-name").using().value("UserApp")
+        module.make(str).named("app-version").using().value("1.0.0")
+        module.make(Database).using().type(Database)
+        module.make(Cache).using().type(Cache)
+        module.make(UserService).using().type(UserService)
+        module.make(Application).using().type(Application)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -282,8 +282,8 @@ class TestNamedDependencies(unittest.TestCase):
         """Test lambda factory functions with named dependencies."""
 
         module = ModuleDef()
-        module.make(str).named("prefix").using("LOG")
-        module.make(str).named("level").using("INFO")
+        module.make(str).named("prefix").using().value("LOG")
+        module.make(str).named("level").using().value("INFO")
 
         # Factory function that uses named dependencies
         def create_log_format(
@@ -291,7 +291,7 @@ class TestNamedDependencies(unittest.TestCase):
         ) -> str:
             return f"[{prefix}:{level}]"
 
-        module.make(str).named("log-format").using(create_log_format)
+        module.make(str).named("log-format").using().func(create_log_format)
 
         injector = Injector()
         planner_input = PlannerInput([module])

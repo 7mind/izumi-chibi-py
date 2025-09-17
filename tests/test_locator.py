@@ -15,7 +15,7 @@ class TestLocator(unittest.TestCase):
     def test_injector_immutability(self):
         """Test that Injector is stateless."""
         module = ModuleDef()
-        module.make(str).using("test")
+        module.make(str).using().value("test")
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -37,8 +37,8 @@ class TestLocator(unittest.TestCase):
                 self.database = database
 
         module = ModuleDef()
-        module.make(Database).using(Database("test-db"))
-        module.make(Service).using(Service)
+        module.make(Database).using().value(Database("test-db"))
+        module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -66,7 +66,7 @@ class TestLocator(unittest.TestCase):
                 self.id = Counter._instance_count
 
         module = ModuleDef()
-        module.make(Counter).using(Counter)
+        module.make(Counter).using().type(Counter)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -91,7 +91,7 @@ class TestLocator(unittest.TestCase):
                 self.created_at = id(self)
 
         module = ModuleDef()
-        module.make(Service).using(Service)
+        module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -113,7 +113,7 @@ class TestLocator(unittest.TestCase):
                 self.id = id(self)
 
         module = ModuleDef()
-        module.make(Service).using(Service)
+        module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -143,7 +143,7 @@ class TestLocator(unittest.TestCase):
             pass
 
         module = ModuleDef()
-        module.make(ExistingService).using(ExistingService)
+        module.make(ExistingService).using().type(ExistingService)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -179,7 +179,7 @@ class TestLocator(unittest.TestCase):
                 return "Hello World"
 
         module = ModuleDef()
-        module.make(Service).using(Service)
+        module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -204,8 +204,8 @@ class TestLocator(unittest.TestCase):
                 self.last_message = message
 
         module = ModuleDef()
-        module.make(Calculator).using(Calculator)
-        module.make(Logger).using(Logger)
+        module.make(Calculator).using().type(Calculator)
+        module.make(Logger).using().type(Logger)
 
         # New API: Create PlannerInput and use stateless Injector
         input = PlannerInput([module])
@@ -241,8 +241,8 @@ class TestLocator(unittest.TestCase):
             pass
 
         module = ModuleDef()
-        module.make(ServiceA).using(ServiceA)
-        module.make(ServiceB).using(ServiceB)
+        module.make(ServiceA).using().type(ServiceA)
+        module.make(ServiceB).using().type(ServiceB)
 
         injector = Injector()
 
@@ -265,8 +265,8 @@ class TestLocator(unittest.TestCase):
                 self.service_a = service_a
 
         module = ModuleDef()
-        module.make(ServiceA).using(ServiceA)
-        module.make(ServiceB).using(ServiceB)
+        module.make(ServiceA).using().type(ServiceA)
+        module.make(ServiceB).using().type(ServiceB)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -294,8 +294,8 @@ class TestLocator(unittest.TestCase):
         """Test named bindings work with the new architecture."""
 
         module = ModuleDef()
-        module.make(str).named("prod").using("production-db")
-        module.make(str).named("test").using("test-db")
+        module.make(str).named("prod").using().value("production-db")
+        module.make(str).named("test").using().value("test-db")
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -330,7 +330,7 @@ class TestLocator(unittest.TestCase):
 
         module = ModuleDef()
         module.many(Handler).add(handler1).add(handler2)
-        module.make(Service).using(Service)
+        module.make(Service).using().type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -361,8 +361,8 @@ class TestLocator(unittest.TestCase):
                 return self.calculator.multiply(self.calculator.add(x, y), 2)
 
         module = ModuleDef()
-        module.make(Calculator).using(Calculator)
-        module.make(MathService).using(MathService)
+        module.make(Calculator).using().type(Calculator)
+        module.make(MathService).using().type(MathService)
 
         injector = Injector()
         planner_input = PlannerInput([module])

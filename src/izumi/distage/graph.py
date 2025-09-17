@@ -8,9 +8,10 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 
 from .activation import Activation
-from .bindings import Binding, BindingType
+from .bindings import Binding
+from .implementation import ImplClass, ImplFunc, ImplSetElement, ImplValue
 from .introspection import SignatureIntrospector
-from .keys import DIKey
+from .keys import DIKey, SetElementKey
 
 
 class CircularDependencyError(Exception):
@@ -60,8 +61,9 @@ class DependencyGraph:
 
     def add_binding(self, binding: Binding) -> None:
         """Add a binding to the graph."""
-        if binding.binding_type == BindingType.SET_ELEMENT:
-            self._set_bindings[binding.key].append(binding)
+        # Check if this is a set element binding using SetElementKey
+        if isinstance(binding.key, SetElementKey):
+            self._set_bindings[binding.key.set_key].append(binding)
         else:
             # Group alternatives by type only (ignore tag for activation purposes)
             type_key = DIKey(binding.key.target_type, None)
@@ -75,7 +77,18 @@ class DependencyGraph:
 
     def get_binding(self, key: DIKey) -> Binding | None:
         """Get a binding by key."""
-        return self._bindings.get(key)
+        # First check regular bindings
+        binding = self._bindings.get(key)
+        if binding:
+            return binding
+
+        # Then check set element bindings
+        for set_bindings in self._set_bindings.values():
+            for binding in set_bindings:
+                if isinstance(binding.key, SetElementKey) and binding.key.element_key == key:
+                    return binding
+
+        return None
 
     def get_set_bindings(self, key: DIKey) -> list[Binding]:
         """Get all set bindings for a key."""
@@ -109,6 +122,14 @@ class DependencyGraph:
             node = GraphNode(key, binding, dependencies, set())
             self._nodes[key] = node
 
+        # Create nodes for set element bindings
+        for _, bindings in self._set_bindings.items():
+            for binding in bindings:
+                if isinstance(binding.key, SetElementKey):
+                    dependencies = self._extract_dependencies(binding)
+                    node = GraphNode(binding.key.element_key, binding, dependencies, set())
+                    self._nodes[binding.key.element_key] = node
+
         # Build dependent relationships
         for node in self._nodes.values():
             for dep_key in node.dependencies:
@@ -118,11 +139,20 @@ class DependencyGraph:
 
     def _extract_dependencies(self, binding: Binding) -> list[DIKey]:
         """Extract dependency keys from a binding."""
-        if binding.binding_type == BindingType.INSTANCE:
+        impl = binding.implementation
+
+        # Value and set element implementations have no dependencies
+        if isinstance(impl, (ImplValue, ImplSetElement)):
             return []
 
         try:
-            dependencies = SignatureIntrospector.extract_dependencies(binding.implementation)
+            if isinstance(impl, ImplClass):
+                dependencies = SignatureIntrospector.extract_dependencies(impl.cls)
+            elif isinstance(impl, ImplFunc):
+                dependencies = SignatureIntrospector.extract_dependencies(impl.func)
+            else:
+                return []
+
             return SignatureIntrospector.get_binding_keys(dependencies)
         except Exception:
             # If introspection fails, assume no dependencies
@@ -221,7 +251,7 @@ class DependencyGraph:
                 filtered_bindings[type_key] = best_binding
                 # Also store it for any specific tagged keys that exist
                 for binding in alternatives:
-                    if binding.key in self._bindings:
+                    if isinstance(binding.key, DIKey) and binding.key in self._bindings:
                         filtered_bindings[binding.key] = best_binding
 
         self._bindings = filtered_bindings

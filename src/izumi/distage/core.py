@@ -8,8 +8,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
-from .bindings import Binding, BindingType
-from .keys import DIKey
+from .bindings import Binding
+from .implementation import (
+    ImplClass,
+    Implementation,
+    ImplFunc,
+    ImplSetElement,
+    ImplValue,
+    UsingBuilder,
+)
+from .keys import DIKey, SetElementKey
 from .tag import Tag
 
 T = TypeVar("T")
@@ -64,29 +72,25 @@ class BindingBuilder[T]:
         self._tag = tag
         return self
 
-    def using(self, implementation: T | type[T] | Callable[[], T]) -> None:
-        """Bind to a specific implementation, instance, or factory."""
-        key = DIKey(self._target_type, self._name)
+    def using(self) -> UsingBuilder[T]:
+        """Create a UsingBuilder for fluent binding configuration."""
 
-        # Convert tag to activation_tags if it's an AxisChoiceDef
-        activation_tags: set[Any] = set()
-        if self._tag is not None:
-            from .activation import AxisChoiceDef
+        def finalize_binding(implementation: Implementation) -> None:
+            key = DIKey(self._target_type, self._name)
 
-            if isinstance(self._tag, AxisChoiceDef):
-                activation_tags.add(self._tag)
+            # Convert tag to activation_tags if it's an AxisChoiceDef
+            activation_tags: set[Any] = set()
+            if self._tag is not None:
+                from .activation import AxisChoiceDef
 
-        if isinstance(implementation, type):
-            # Class binding
-            binding = Binding(key, BindingType.CLASS, implementation, activation_tags)
-        elif callable(implementation) and not isinstance(implementation, type):
-            # Factory binding
-            binding = Binding(key, BindingType.FACTORY, implementation, activation_tags)
-        else:
-            # Instance binding
-            binding = Binding(key, BindingType.INSTANCE, implementation, activation_tags)
+                if isinstance(self._tag, AxisChoiceDef):
+                    activation_tags.add(self._tag)
 
-        self._module.add_binding(binding)
+            # Create binding with the implementation
+            binding = Binding(key, implementation, activation_tags)
+            self._module.add_binding(binding)
+
+        return UsingBuilder(self._target_type, finalize_binding)
 
 
 class SetBindingBuilder[T]:
@@ -95,12 +99,45 @@ class SetBindingBuilder[T]:
     def __init__(self, target_type: type[T], module: ModuleDef):
         self._target_type = target_type
         self._module = module
+        self._element_counter = 0
+
+    def _generate_element_name(self) -> str:
+        """Generate a unique name for set element."""
+        name = f"set-element-{self._element_counter}"
+        self._element_counter += 1
+        return name
 
     def add(self, instance: T) -> SetBindingBuilder[T]:
-        """Add an instance to the set."""
-        # Create a set binding key
-        key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
-        binding = Binding(key, BindingType.SET_ELEMENT, instance)
+        """Add an instance to the set (backward compatibility)."""
+        return self.add_value(instance)
+
+    def add_value(self, instance: T) -> SetBindingBuilder[T]:
+        """Add a value instance to the set."""
+        set_key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
+        element_key = DIKey(self._target_type, self._generate_element_name())
+        key = SetElementKey(set_key, element_key)
+        impl = ImplSetElement(ImplValue(instance))
+        binding = Binding(key, impl)
+        self._module.add_binding(binding)
+        return self
+
+    def add_type(self, cls: type[T]) -> SetBindingBuilder[T]:
+        """Add a class type to the set (will be instantiated)."""
+        set_key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
+        element_key = DIKey(self._target_type, self._generate_element_name())
+        key = SetElementKey(set_key, element_key)
+        impl = ImplSetElement(ImplClass(cls))
+        binding = Binding(key, impl)
+        self._module.add_binding(binding)
+        return self
+
+    def add_func(self, factory: Callable[..., T]) -> SetBindingBuilder[T]:
+        """Add a factory function to the set."""
+        set_key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
+        element_key = DIKey(self._target_type, self._generate_element_name())
+        key = SetElementKey(set_key, element_key)
+        impl = ImplSetElement(ImplFunc(factory))
+        binding = Binding(key, impl)
         self._module.add_binding(binding)
         return self
 
@@ -115,5 +152,6 @@ class FactoryBindingBuilder[T]:
     def from_factory(self, factory_impl: type[T]) -> None:
         """Bind the factory to a specific implementation."""
         key = DIKey(self._factory_type, None)
-        binding = Binding(key, BindingType.FACTORY, factory_impl)
+        impl = ImplClass(factory_impl)
+        binding = Binding(key, impl)
         self._module.add_binding(binding)
