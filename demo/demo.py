@@ -138,20 +138,20 @@ def main():
 
     # Production module
     prod_module = ModuleDef()
-    prod_module.make(Config).from_(Config("ProductionApp", debug=False))
-    prod_module.make(str).from_(create_connection_string)  # Connection string factory
-    prod_module.make(Database).from_(PostgresDB)  # Class binding - will resolve constructor deps
-    prod_module.make(Logger).from_(Logger)  # Class binding
-    prod_module.make(UserService).from_(UserService)
+    prod_module.make(Config).using(Config("ProductionApp", debug=False))
+    prod_module.make(str).using(create_connection_string)  # Connection string factory
+    prod_module.make(Database).using(PostgresDB)  # Class binding - will resolve constructor deps
+    prod_module.make(Logger).using(Logger)  # Class binding
+    prod_module.make(UserService).using(UserService)
 
     # Set bindings for commands
     prod_module.many(Command).add(StartCommand)
     prod_module.many(Command).add(StatusCommand)
-    prod_module.make(CommandExecutor).from_(CommandExecutor)
+    prod_module.make(CommandExecutor).using(CommandExecutor)
 
     # Test module (adds additional bindings)
     test_module = ModuleDef()
-    test_module.make(Database).tagged(test_tag).from_(InMemoryDB())  # Instance binding
+    test_module.make(Database).tagged(test_tag).using(InMemoryDB())  # Instance binding
 
     print("1. Production Environment:")
     print("-" * 30)
@@ -205,8 +205,8 @@ def main():
         def __init__(self, a: A):
             self.a = a
 
-    circular_module.make(A).from_(A)
-    circular_module.make(B).from_(B)
+    circular_module.make(A).using(A)
+    circular_module.make(B).using(B)
 
     try:
         Injector(circular_module)
@@ -227,7 +227,7 @@ def main():
             self.missing_service = missing_service
 
     incomplete_module = ModuleDef()
-    incomplete_module.make(ServiceWithMissingDep).from_(ServiceWithMissingDep)
+    incomplete_module.make(ServiceWithMissingDep).using(ServiceWithMissingDep)
 
     try:
         Injector(incomplete_module)

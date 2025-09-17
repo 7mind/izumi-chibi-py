@@ -123,9 +123,9 @@ class TestRootsAndActivations(unittest.TestCase):
     def test_activation_filtering(self):
         """Test that activations properly filter bindings."""
         module = ModuleDef()
-        module.make(self.Database).tagged(StandardAxis.Mode.Prod).from_(self.ProdDatabase)
-        module.make(self.Database).tagged(StandardAxis.Mode.Test).from_(self.TestDatabase)
-        module.make(self.Service).from_(self.Service)
+        module.make(self.Database).tagged(StandardAxis.Mode.Prod).using(self.ProdDatabase)
+        module.make(self.Database).tagged(StandardAxis.Mode.Test).using(self.TestDatabase)
+        module.make(self.Service).using(self.Service)
 
         # Test production activation
         prod_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Prod})
@@ -146,9 +146,9 @@ class TestRootsAndActivations(unittest.TestCase):
     def test_roots_garbage_collection(self):
         """Test that roots perform garbage collection."""
         module = ModuleDef()
-        module.make(self.Database).from_(self.Database)
-        module.make(self.Service).from_(self.Service)
-        module.make(self.UnusedService).from_(self.UnusedService)
+        module.make(self.Database).using(self.Database)
+        module.make(self.Service).using(self.Service)
+        module.make(self.UnusedService).using(self.UnusedService)
 
         # With specific roots, UnusedService should not be available
         service_roots = Roots.target(self.Service)
@@ -165,9 +165,9 @@ class TestRootsAndActivations(unittest.TestCase):
     def test_everything_roots_no_garbage_collection(self):
         """Test that everything roots prevent garbage collection."""
         module = ModuleDef()
-        module.make(self.Database).from_(self.Database)
-        module.make(self.Service).from_(self.Service)
-        module.make(self.UnusedService).from_(self.UnusedService)
+        module.make(self.Database).using(self.Database)
+        module.make(self.Service).using(self.Service)
+        module.make(self.UnusedService).using(self.UnusedService)
 
         # With everything roots, all services should be available
         injector = Injector(module, roots=Roots.everything())
@@ -181,9 +181,9 @@ class TestRootsAndActivations(unittest.TestCase):
     def test_multiple_roots(self):
         """Test using multiple roots."""
         module = ModuleDef()
-        module.make(self.Database).from_(self.Database)
-        module.make(self.Service).from_(self.Service)
-        module.make(self.UnusedService).from_(self.UnusedService)
+        module.make(self.Database).using(self.Database)
+        module.make(self.Service).using(self.Service)
+        module.make(self.UnusedService).using(self.UnusedService)
 
         # Multiple roots should keep both Service and UnusedService
         multi_roots = Roots.target(self.Service, self.UnusedService)
@@ -198,10 +198,10 @@ class TestRootsAndActivations(unittest.TestCase):
     def test_roots_and_activations_combined(self):
         """Test roots and activations working together."""
         module = ModuleDef()
-        module.make(self.Database).tagged(StandardAxis.Mode.Prod).from_(self.ProdDatabase)
-        module.make(self.Database).tagged(StandardAxis.Mode.Test).from_(self.TestDatabase)
-        module.make(self.Service).from_(self.Service)
-        module.make(self.UnusedService).from_(self.UnusedService)
+        module.make(self.Database).tagged(StandardAxis.Mode.Prod).using(self.ProdDatabase)
+        module.make(self.Database).tagged(StandardAxis.Mode.Test).using(self.TestDatabase)
+        module.make(self.Service).using(self.Service)
+        module.make(self.UnusedService).using(self.UnusedService)
 
         # Use specific roots with activation
         service_roots = Roots.target(self.Service)
@@ -252,8 +252,8 @@ class TestCustomActivationAxis(unittest.TestCase):
                 super().__init__("low")
 
         module = ModuleDef()
-        module.make(Service).tagged(Priority.High).from_(HighPriorityService)
-        module.make(Service).tagged(Priority.Low).from_(LowPriorityService)
+        module.make(Service).tagged(Priority.High).using(HighPriorityService)
+        module.make(Service).tagged(Priority.Low).using(LowPriorityService)
 
         # Test high priority activation
         high_activation = Activation({Priority: Priority.High})
@@ -289,8 +289,8 @@ class TestFallbackBindings(unittest.TestCase):
                 super().__init__("test")
 
         module = ModuleDef()
-        module.make(Service).from_(DefaultService)  # Untagged fallback
-        module.make(Service).tagged(StandardAxis.Mode.Test).from_(TestService)
+        module.make(Service).using(DefaultService)  # Untagged fallback
+        module.make(Service).tagged(StandardAxis.Mode.Test).using(TestService)
 
         # With test activation, should use TestService
         test_activation = Activation({StandardAxis.Mode: StandardAxis.Mode.Test})

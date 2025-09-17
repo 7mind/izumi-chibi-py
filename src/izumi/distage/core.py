@@ -86,7 +86,7 @@ class BindingBuilder[T]:
 
         return BindingBuilder(self._module, self._target_type, new_tag, new_activation_tags)
 
-    def from_(self, implementation: type[T] | T | Callable[..., T]) -> None:
+    def using(self, implementation: type[T] | T | Callable[..., T]) -> None:
         """Bind to a specific implementation, instance, or factory function."""
         key = BindingKey(self._target_type, self._tag)
 
@@ -101,7 +101,7 @@ class BindingBuilder[T]:
 
     def to(self, implementation_type: type[T]) -> None:
         """Bind to a specific implementation type."""
-        self.from_(implementation_type)
+        self.using(implementation_type)
 
 
 class SetBindingBuilder[T]:

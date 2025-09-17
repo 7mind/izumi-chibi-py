@@ -22,7 +22,7 @@ class TestBasicBinding(unittest.TestCase):
                 return "Hello World"
 
         module = ModuleDef()
-        module.make(Service).from_(Service)
+        module.make(Service).using(Service)
 
         injector = Injector(module)
         service = injector.get(Service)
@@ -40,7 +40,7 @@ class TestBasicBinding(unittest.TestCase):
         config_instance = Config("test-config")
 
         module = ModuleDef()
-        module.make(Config).from_(config_instance)
+        module.make(Config).using(config_instance)
 
         injector = Injector(module)
         config = injector.get(Config)
@@ -55,7 +55,7 @@ class TestBasicBinding(unittest.TestCase):
             return "factory-created"
 
         module = ModuleDef()
-        module.make(str).from_(create_service)
+        module.make(str).using(create_service)
 
         injector = Injector(module)
         result = injector.get(str)
@@ -78,8 +78,8 @@ class TestDependencyInjection(unittest.TestCase):
                 self.database = database
 
         module = ModuleDef()
-        module.make(Database).from_(Database("test-db"))
-        module.make(Service).from_(Service)
+        module.make(Database).using(Database("test-db"))
+        module.make(Service).using(Service)
 
         injector = Injector(module)
         service = injector.get(Service)
@@ -95,7 +95,7 @@ class TestDependencyInjection(unittest.TestCase):
                 self.config = config or "default"
 
         module = ModuleDef()
-        module.make(OptionalService).from_(OptionalService)
+        module.make(OptionalService).using(OptionalService)
 
         injector = Injector(module)
         service = injector.get(OptionalService)
@@ -113,8 +113,8 @@ class TestTaggedBindings(unittest.TestCase):
         test_tag = Tag("test")
 
         module = ModuleDef()
-        module.make(str).tagged(prod_tag).from_("production-db")
-        module.make(str).tagged(test_tag).from_("test-db")
+        module.make(str).tagged(prod_tag).using("production-db")
+        module.make(str).tagged(test_tag).using("test-db")
 
         injector = Injector(module)
 
@@ -150,7 +150,7 @@ class TestSetBindings(unittest.TestCase):
 
         module = ModuleDef()
         module.many(Handler).add(handler1).add(handler2)
-        module.make(Service).from_(Service)
+        module.make(Service).using(Service)
 
         injector = Injector(module)
         service = injector.get(Service)
@@ -224,8 +224,8 @@ class TestGraphValidation(unittest.TestCase):
                 self.a = a
 
         module = ModuleDef()
-        module.make(A).from_(A)
-        module.make(B).from_(B)
+        module.make(A).using(A)
+        module.make(B).using(B)
 
         # Either circular dependency or missing dependency should be caught
         with self.assertRaises((CircularDependencyError, MissingBindingError)):
@@ -242,7 +242,7 @@ class TestGraphValidation(unittest.TestCase):
                 self.missing = missing
 
         module = ModuleDef()
-        module.make(Service).from_(Service)
+        module.make(Service).using(Service)
 
         with self.assertRaises(MissingBindingError):
             Injector(module)
@@ -264,12 +264,12 @@ class TestMultipleModules(unittest.TestCase):
 
         # Base module
         base_module = ModuleDef()
-        base_module.make(str).from_("localhost")  # Default host
-        base_module.make(Database).from_(Database)
+        base_module.make(str).using("localhost")  # Default host
+        base_module.make(Database).using(Database)
 
         # Extension module
         ext_module = ModuleDef()
-        ext_module.make(Service).from_(Service)
+        ext_module.make(Service).using(Service)
 
         injector = Injector(base_module, ext_module)
         service = injector.get(Service)
