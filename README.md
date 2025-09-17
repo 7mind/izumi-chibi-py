@@ -11,6 +11,7 @@ At this point the project is not battle-tested. Expect dragons, landmines and va
 
 `distage` provides a powerful, type-safe dependency injection framework with:
 
+- **Non-invasive design** - No decorators, base classes, or framework-specific code required in your business logic
 - **Fluent DSL for defining bindings** - Type-safe API with `.using().value()/.type()/.func()/.factory()`
 - **Signature introspection** - Automatic extraction of dependency requirements from type hints
 - **Dependency graph formation and validation** - Build and validate the complete dependency graph at startup
@@ -331,12 +332,13 @@ service = injector.get(planner_input, UserService)
 
 Chibi Izumi follows these design principles from the original distage:
 
-1. **Compile-time safety** - Dependencies are validated at plan creation time
-2. **Type-safe bindings** - Algebraic data structure ensures binding correctness
-3. **Immutable bindings** - Bindings are defined once and cannot be modified
-4. **Explicit dependency graph** - All dependencies are explicit and traceable
-5. **Fail-fast validation** - Circular and missing dependencies are detected early
-6. **Zero-configuration features** - Automatic logger injection, factory patterns
+1. **Non-invasive design** - Your classes remain framework-free, just use regular constructors
+2. **Compile-time safety** - Dependencies are validated at plan creation time
+3. **Type-safe bindings** - Algebraic data structure ensures binding correctness
+4. **Immutable bindings** - Bindings are defined once and cannot be modified
+5. **Explicit dependency graph** - All dependencies are explicit and traceable
+6. **Fail-fast validation** - Circular and missing dependencies are detected early
+7. **Zero-configuration features** - Automatic logger injection, factory patterns
 
 ## Limitations
 
