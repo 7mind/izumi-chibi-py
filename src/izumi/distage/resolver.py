@@ -25,11 +25,13 @@ class DependencyResolver:
         graph: DependencyGraph,
         activation: Activation | None = None,
         roots: Roots | None = None,
+        parent_locator: Any = None,
     ):
         super().__init__()
         self._graph = graph
         self._activation = activation
         self._roots = roots
+        self._parent_locator = parent_locator
         self._instances: dict[DIKey, Any] = {}
         self._resolving: set[DIKey] = set()
 
@@ -66,6 +68,13 @@ class DependencyResolver:
             set_bindings = self._graph.get_set_bindings(set_key)
             if set_bindings:
                 return self._resolve_set_binding_direct(set_bindings)
+            # Check parent locator if available
+            if self._parent_locator is not None:
+                try:
+                    return self._parent_locator.get(key.target_type, key.name)
+                except ValueError:
+                    pass  # Parent doesn't have it either
+
             raise ValueError(f"No binding found for {key}")
 
         return self._create_from_binding(binding)

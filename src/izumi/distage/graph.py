@@ -6,12 +6,16 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from .activation import Activation
 from .bindings import Binding
 from .implementation import ImplClass, ImplFunc, ImplSetElement, ImplValue
 from .introspection import SignatureIntrospector
 from .keys import DIKey, SetElementKey
+
+if TYPE_CHECKING:
+    from .locator import Locator
 
 
 class CircularDependencyError(Exception):
@@ -112,6 +116,16 @@ class DependencyGraph:
         self._check_circular_dependencies()
         self._validated = True
 
+    def validate_with_parent_locator(self, parent_locator: Locator) -> None:
+        """Validate the dependency graph with a parent locator for missing dependencies."""
+        if self._validated:
+            return
+
+        self._build_graph()
+        self._check_missing_dependencies_with_parent(parent_locator)
+        self._check_circular_dependencies()
+        self._validated = True
+
     def _build_graph(self) -> None:
         """Build the dependency graph nodes."""
         self._nodes.clear()
@@ -169,6 +183,29 @@ class DependencyGraph:
                     if AutoLoggerManager.should_auto_inject_logger(dep_key):
                         # Skip validation for auto-injectable loggers
                         continue
+                    raise MissingBindingError(dep_key, node.key)
+
+    def _check_missing_dependencies_with_parent(self, parent_locator: Locator) -> None:
+        """Check for missing dependencies, allowing parent locator to provide them."""
+        for node in self._nodes.values():
+            for dep_key in node.dependencies:
+                if dep_key not in self._bindings and dep_key not in self._set_bindings:
+                    # Check if this is an auto-injectable logger
+                    from .logger_injection import AutoLoggerManager
+
+                    if AutoLoggerManager.should_auto_inject_logger(dep_key):
+                        # Skip validation for auto-injectable loggers
+                        continue
+
+                    # Check if parent locator can provide this dependency
+                    try:
+                        parent_locator.get(dep_key.target_type, dep_key.name)
+                        # Parent has it, so it's OK
+                        continue
+                    except ValueError:
+                        # Parent doesn't have it either
+                        pass
+
                     raise MissingBindingError(dep_key, node.key)
 
     def _check_circular_dependencies(self) -> None:

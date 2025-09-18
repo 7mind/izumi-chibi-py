@@ -28,7 +28,21 @@ class Injector:
 
     The Injector builds and validates dependency graphs but does not manage
     instances or store state. It produces Plans that can be executed by Locators.
+
+    Supports locator inheritance: when a parent locator is provided, child locators
+    will check parent locators for missing dependencies before failing.
     """
+
+    def __init__(self, parent_locator: Locator | None = None):
+        """
+        Create a new Injector.
+
+        Args:
+            parent_locator: Optional parent locator for dependency inheritance.
+                           When resolving dependencies, this locator will be checked
+                           if dependencies are missing from the current bindings.
+        """
+        self._parent_locator = parent_locator
 
     def plan(self, input: PlannerInput) -> Plan:
         """
@@ -108,7 +122,7 @@ class Injector:
             if binding_key not in instances:
                 resolve_instance(binding_key)
 
-        return Locator(plan, instances)
+        return Locator(plan, instances, self._parent_locator)
 
     def get(self, input: PlannerInput, target_type: type[T] | Any, name: str | None = None) -> T:
         """
@@ -148,7 +162,12 @@ class Injector:
             # Filter bindings that don't match the activation
             graph.filter_bindings_by_activation(input.activation)
 
-        graph.validate()
+        # If we have a parent locator, we need to be more lenient with validation
+        # because missing dependencies might be available from the parent
+        if self._parent_locator is not None:
+            graph.validate_with_parent_locator(self._parent_locator)
+        else:
+            graph.validate()
 
         # Validate roots and perform garbage collection if needed
         from .roots import RootsFinder
@@ -182,6 +201,14 @@ class Injector:
             set_bindings = plan.graph.get_set_bindings(set_key)
             if set_bindings:
                 return self._resolve_set_binding_direct(set_bindings, resolve_fn)
+
+            # Check parent locator if available
+            if self._parent_locator is not None:
+                try:
+                    return self._parent_locator.get(key.target_type, key.name)  # pyright: ignore[reportUnknownVariableType]
+                except ValueError:
+                    pass  # Parent doesn't have it either, fall through to error
+
             raise ValueError(f"No binding found for {key}")
 
         return self._create_from_binding(binding, resolve_fn)
@@ -310,3 +337,29 @@ class Injector:
 
         locator = ResolverLocator(resolve_fn)
         return Factory(target_type, locator)  # pyright: ignore[reportUnknownVariableType]
+
+    @classmethod
+    def inherit(cls, parent_locator: Locator) -> Injector:
+        """
+        Create a child Injector that inherits from a parent locator.
+
+        Args:
+            parent_locator: The parent locator to inherit from
+
+        Returns:
+            A new Injector that will check the parent locator for missing dependencies
+
+        Example:
+            ```python
+            # Create parent injector and locator
+            parent_injector = Injector()
+            parent_plan = parent_injector.plan(parent_input)
+            parent_locator = parent_injector.produce(parent_plan)
+
+            # Create child injector that inherits from parent
+            child_injector = Injector.inherit(parent_locator)
+            child_plan = child_injector.plan(child_input)
+            child_locator = child_injector.produce(child_plan)
+            ```
+        """
+        return cls(parent_locator)

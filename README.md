@@ -29,6 +29,7 @@ At this point the project is not battle-tested. Expect dragons, landmines and va
 - **Missing dependency detection** - Ensure all required dependencies are available
 - **Tagged bindings** - Support for multiple implementations of the same interface
 - **Set bindings** - Collect multiple implementations into sets
+- **Locator inheritance** - Create child injectors that inherit dependencies from parent locators
 
 ## Quick Start
 
@@ -377,6 +378,96 @@ result = injector.produce_run(planner_input, business_logic)
 # Pattern 3: Simple get (for quick usage)
 service = injector.get(planner_input, UserService)
 ```
+
+### Locator Inheritance
+
+Locator inheritance allows you to create child injectors that inherit dependencies from parent locators. This enables you to create a base set of shared dependencies and then extend them with additional dependencies for specific use cases:
+
+```python
+from izumi.distage import ModuleDef, Injector, PlannerInput
+
+# Shared services
+class DatabaseConfig:
+    def __init__(self, connection_string: str = "postgresql://prod:5432/app"):
+        self.connection_string = connection_string
+
+class Database:
+    def __init__(self, config: DatabaseConfig):
+        self.config = config
+
+    def query(self, sql: str) -> str:
+        return f"DB[{self.config.connection_string}]: {sql}"
+
+# Application-specific services
+class UserService:
+    def __init__(self, database: Database):
+        self.database = database
+
+    def create_user(self, name: str) -> str:
+        return self.database.query(f"INSERT INTO users (name) VALUES ('{name}')")
+
+class ReportService:
+    def __init__(self, database: Database):
+        self.database = database
+
+    def generate_report(self) -> str:
+        return self.database.query("SELECT COUNT(*) FROM users")
+
+# 1. Create parent injector with shared dependencies
+parent_module = ModuleDef()
+parent_module.make(DatabaseConfig).using().type(DatabaseConfig)
+parent_module.make(Database).using().type(Database)
+
+parent_injector = Injector()
+parent_input = PlannerInput([parent_module])
+parent_plan = parent_injector.plan(parent_input)
+parent_locator = parent_injector.produce(parent_plan)
+
+# 2. Create child injector for user operations
+user_module = ModuleDef()
+user_module.make(UserService).using().type(UserService)
+
+user_injector = Injector.inherit(parent_locator)
+user_input = PlannerInput([user_module])
+user_plan = user_injector.plan(user_input)
+user_locator = user_injector.produce(user_plan)
+
+# 3. Create another child injector for reporting
+report_module = ModuleDef()
+report_module.make(ReportService).using().type(ReportService)
+
+report_injector = Injector.inherit(parent_locator)
+report_input = PlannerInput([report_module])
+report_plan = report_injector.plan(report_input)
+report_locator = report_injector.produce(report_plan)
+
+# 4. Use the services - child locators inherit parent dependencies
+user_service = user_locator.get(UserService)  # UserService + Database + DatabaseConfig
+report_service = report_locator.get(ReportService)  # ReportService + Database + DatabaseConfig
+
+print(user_service.create_user("alice"))
+print(report_service.generate_report())
+
+# 5. Alternative: use create_child method for custom planning
+custom_module = ModuleDef()
+custom_module.make(ReportService).using().type(ReportService)
+
+custom_injector = Injector.inherit(parent_locator)
+custom_input = PlannerInput([custom_module])
+custom_plan = custom_injector.plan(custom_input)
+
+# Create child locator directly from parent
+custom_locator = parent_locator.create_child(custom_plan)
+custom_report_service = custom_locator.get(ReportService)
+```
+
+Key benefits of locator inheritance:
+
+- **Shared dependencies**: Define common dependencies once in the parent
+- **Modular composition**: Each child can focus on specific functionality
+- **Instance reuse**: Parent instances are shared across all children (singleton behavior preserved)
+- **Override capability**: Child bindings take precedence over parent bindings
+- **Multi-level inheritance**: Create inheritance chains for complex scenarios
 
 ## Architecture
 

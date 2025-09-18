@@ -20,18 +20,28 @@ class Locator:
 
     Each Locator represents one execution of a Plan and contains the
     resolved instances for that execution.
+
+    Supports locator inheritance: when a parent locator is provided,
+    this locator will check parent locators for missing dependencies.
     """
 
-    def __init__(self, plan: Plan, instances: dict[DIKey, object] | None = None):
+    def __init__(
+        self,
+        plan: Plan,
+        instances: dict[DIKey, object] | None = None,
+        parent: Locator | None = None,
+    ):
         """
         Create a new Locator from a Plan and instances.
 
         Args:
             plan: The validated Plan to execute
             instances: Dict mapping DIKey to instances
+            parent: Optional parent locator for dependency inheritance
         """
         self._plan = plan
         self._instances: dict[DIKey, object] = instances or {}
+        self._parent = parent
 
     def get(self, target_type: type[T] | Any, name: str | None = None) -> T:
         """
@@ -65,13 +75,25 @@ class Locator:
                     self._instances[key] = logger
                     return logger  # type: ignore[return-value]
                 else:
+                    # Check parent locator if available
+                    if self._parent is not None:
+                        try:
+                            instance = self._parent.get(target_type, name)
+                            # Cache the instance from parent in this locator
+                            self._instances[key] = instance
+                            return instance  # type: ignore[no-any-return]
+                        except ValueError:
+                            pass  # Parent doesn't have it either
+
                     raise ValueError(f"No binding found for {key}")
 
             # Import here to avoid circular import
             from .resolver import DependencyResolver
 
             # Create a resolver and resolve this key
-            resolver = DependencyResolver(self._plan.graph, self._plan.activation)
+            resolver = DependencyResolver(
+                self._plan.graph, self._plan.activation, parent_locator=self._parent
+            )
             # Pass existing instances to the resolver
             resolver._instances.update(self._instances)  # pyright: ignore[reportPrivateUsage]
 
@@ -193,3 +215,25 @@ class Locator:
     def plan(self) -> Plan:
         """Get the Plan this Locator is executing."""
         return self._plan
+
+    @property
+    def parent(self) -> Locator | None:
+        """Get the parent locator, if any."""
+        return self._parent
+
+    def has_parent(self) -> bool:
+        """Check if this locator has a parent."""
+        return self._parent is not None
+
+    def create_child(self, plan: Plan, instances: dict[DIKey, object] | None = None) -> Locator:
+        """
+        Create a child locator with this locator as parent.
+
+        Args:
+            plan: The Plan for the child locator
+            instances: Optional initial instances for the child
+
+        Returns:
+            A new Locator with this locator as parent
+        """
+        return Locator(plan, instances, self)
