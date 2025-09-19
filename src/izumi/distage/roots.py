@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from .model import DependencyGraph, InstanceKey, DIKey
+from .model import DependencyGraph, DIKey, InstanceKey
 
 T = TypeVar("T")
 

@@ -7,6 +7,7 @@ import unittest
 from typing import Annotated
 
 from izumi.distage import Factory, Id, Injector, ModuleDef, PlannerInput
+from izumi.distage.model import DIKey
 
 
 class TestFactoryBindings(unittest.TestCase):
@@ -27,7 +28,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[Service])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[Service]))
 
         # Test that we get a Factory instance
         self.assertIsInstance(factory, Factory)
@@ -62,7 +63,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[Service])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[Service]))
 
         instance = factory.create()
         self.assertEqual(instance.get_value(), "injected")
@@ -88,7 +89,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[Service])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[Service]))
 
         # The 'message' parameter is not available in DI, so it must be provided
         instance = factory.create("hello world")
@@ -115,7 +116,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[Service])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[Service]))
 
         # The 'api-key' dependency is not available in DI, so it must be provided
         instance = factory.create(**{"api-key": "secret123"})
@@ -157,7 +158,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[Service])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[Service]))
 
         # Database and Cache are resolved from DI
         # user_id (positional) and timeout (named) must be provided
@@ -177,7 +178,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[Service])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[Service]))
 
         with self.assertRaises(ValueError) as context:
             factory.create()  # Missing required_param
@@ -197,7 +198,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[Service])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[Service]))
 
         with self.assertRaises(ValueError) as context:
             factory.create()  # Missing api-key
@@ -216,7 +217,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[Service])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[Service]))
 
         with self.assertRaises(TypeError) as context:
             factory.create(unexpected="value")
@@ -244,7 +245,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[Service])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[Service]))
 
         # Should work with default timeout
         instance = factory.create()
@@ -265,7 +266,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[Counter])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[Counter]))
 
         # Reset counter
         Counter.count = 0
@@ -302,11 +303,11 @@ class TestFactoryBindings(unittest.TestCase):
         locator = injector.produce(plan)
 
         # Get singleton instances from the same locator
-        singleton1 = locator.get(Service)
-        singleton2 = locator.get(Service)
+        singleton1 = locator.get(DIKey.of(Service))
+        singleton2 = locator.get(DIKey.of(Service))
 
         # Get factory and create instances
-        factory = locator.get(Factory[Service], "factory")
+        factory = locator.get(DIKey.of(Factory[Service], "factory"))
         factory_instance1 = factory.create()
         factory_instance2 = factory.create()
 
@@ -352,7 +353,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[UserService])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[UserService]))
 
         # Create instances with different user IDs
         user_service1 = factory.create("alice")
@@ -385,7 +386,7 @@ class TestFactoryFunc(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        factory = injector.produce(injector.plan(planner_input)).get(Factory[str])
+        factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[str]))
 
         # Test that we get a Factory instance
         self.assertIsInstance(factory, Factory)

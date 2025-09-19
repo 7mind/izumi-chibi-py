@@ -99,7 +99,7 @@ class Injector:
             if plan.has_operation(key):
                 return instances[key]
             else:
-                return self._parent_locator.get(key.target_type, key.name)  # pyright: ignore[reportUnknownVariableType]
+                return self._parent_locator.get(key)  # pyright: ignore[reportUnknownVariableType]
 
         # Resolve all dependencies in topological order
         for binding_key in plan.get_execution_order():
@@ -119,8 +119,6 @@ class Injector:
         for module in input.modules:
             for binding in module.bindings:
                 graph.add_binding(binding)
-
-        # Note: Automatic logger injection is handled directly in _instantiate_class and _call_factory
 
         # Filter bindings based on activation
         if not input.activation.choices:
@@ -165,7 +163,7 @@ class Injector:
             # Check parent locator if available
             if not self._parent_locator.is_empty():
                 try:
-                    return self._parent_locator.get(key.target_type, key.name)  # pyright: ignore[reportUnknownVariableType]
+                    return self._parent_locator.get(key)  # pyright: ignore[reportUnknownVariableType]
                 except ValueError:
                     pass  # Parent doesn't have it either, fall through to error
 

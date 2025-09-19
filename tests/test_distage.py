@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from izumi.distage import Injector, ModuleDef, PlannerInput
 from izumi.distage.introspection import SignatureIntrospector
+from izumi.distage.model import DIKey
 from izumi.distage.model.graph import CircularDependencyError, MissingBindingError
 
 
@@ -49,7 +50,7 @@ class TestBasicBinding(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        config = injector.produce(injector.plan(planner_input)).get(Config)
+        config = injector.produce(injector.plan(planner_input)).get(DIKey.of(Config))
 
         self.assertIs(config, config_instance)
         self.assertEqual(config.name, "test-config")
@@ -65,7 +66,7 @@ class TestBasicBinding(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        result = injector.produce(injector.plan(planner_input)).get(str)
+        result = injector.produce(injector.plan(planner_input)).get(DIKey.of(str))
 
         self.assertEqual(result, "factory-created")
 
@@ -90,7 +91,7 @@ class TestDependencyInjection(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(Service)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(Service))
 
         self.assertIsInstance(service.database, Database)
         self.assertEqual(service.database.connection_string, "test-db")
@@ -107,7 +108,7 @@ class TestDependencyInjection(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(OptionalService)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(OptionalService))
 
         self.assertEqual(service.config, "default")
 
@@ -126,8 +127,8 @@ class TestTaggedBindings(unittest.TestCase):
         planner_input = PlannerInput([module])
 
         locator = injector.produce(injector.plan(planner_input))
-        prod_db = locator.get(str, "prod")
-        test_db = locator.get(str, "test")
+        prod_db = locator.get(DIKey.of(str, "prod"))
+        test_db = locator.get(DIKey.of(str, "test"))
 
         self.assertEqual(prod_db, "production-db")
         self.assertEqual(test_db, "test-db")
@@ -162,7 +163,7 @@ class TestSetBindings(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(Service)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(Service))
 
         self.assertEqual(len(service.handlers), 2)
         self.assertIn(handler1, service.handlers)
@@ -240,7 +241,7 @@ class TestGraphValidation(unittest.TestCase):
         with self.assertRaises((CircularDependencyError, MissingBindingError)):
             injector = Injector()
             planner_input = PlannerInput([module])
-            injector.produce(injector.plan(planner_input)).get(A)
+            injector.produce(injector.plan(planner_input)).get(DIKey.of(A))
 
     def test_missing_dependency_detection(self):
         """Test detection of missing dependencies."""
@@ -258,7 +259,7 @@ class TestGraphValidation(unittest.TestCase):
         with self.assertRaises(MissingBindingError):
             injector = Injector()
             planner_input = PlannerInput([module])
-            injector.produce(injector.plan(planner_input)).get(Service)
+            injector.produce(injector.plan(planner_input)).get(DIKey.of(Service))
 
 
 class TestMultipleModules(unittest.TestCase):
@@ -286,7 +287,7 @@ class TestMultipleModules(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([base_module, ext_module])
-        service = injector.produce(injector.plan(planner_input)).get(Service)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(Service))
 
         self.assertEqual(service.database.host, "localhost")
 

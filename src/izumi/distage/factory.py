@@ -74,7 +74,7 @@ class Factory[T]:
         for di_key in self._dependency_keys:
             try:
                 # Try to resolve from the DI system
-                resolved_value = self._locator.get(di_key.target_type, di_key.name)
+                resolved_value = self._locator.get(di_key)
                 resolved_args.append(resolved_value)
             except ValueError:
                 # Dependency not available in DI system, needs to be provided

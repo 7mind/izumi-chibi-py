@@ -55,27 +55,24 @@ class LocatorImpl(Locator):
         """Check if this is an empty locator."""
         return False  # LocatorImpl is never empty
 
-    def get(self, target_type: type[T] | Any, name: str | None = None) -> T:
+    def get(self, key: DIKey) -> Any:
         """
-        Get an instance of the given type, resolving it if not already resolved.
+        Get an instance for the given key, resolving it if not already resolved.
 
         Args:
-            target_type: The type to resolve
-            name: Optional name qualifier
+            key: The DIKey to resolve
 
         Returns:
-            An instance of the requested type
+            An instance for the requested key
 
         Raises:
-            ValueError: If no binding exists for the requested type
+            ValueError: If no binding exists for the requested key
         """
-        key = InstanceKey(target_type, name)
-
         if key not in self._instances:
             # Try to resolve it on-demand
             if self._parent.has_key(key):
-                return self._parent.get(target_type, name)  # type: ignore[no-any-return]
-            elif AutoLoggerManager.should_auto_inject_logger(key):
+                return self._parent.get(key)
+            elif isinstance(key, InstanceKey) and AutoLoggerManager.should_auto_inject_logger(key):
                 # Create a generic logger using stack introspection
                 import logging
 
@@ -84,11 +81,11 @@ class LocatorImpl(Locator):
                 location_name = LoggerLocationIntrospector.get_logger_location_name()
                 logger = logging.getLogger(location_name)
                 self._instances[key] = logger
-                return logger  # type: ignore[return-value]
+                return logger
             else:
                 raise ValueError(f"No binding found for {key}")
 
-        return self._instances[key]  # type: ignore[return-value]
+        return self._instances[key]
 
     def find(self, key: DIKey) -> Any | None:
         """
@@ -101,11 +98,7 @@ class LocatorImpl(Locator):
             An instance of the requested type or None if not found
         """
         try:
-            if isinstance(key, InstanceKey):
-                return self.get(key.target_type, key.name)
-            else:
-                # For SetElementKey, we don't support direct resolution
-                return None
+            return self.get(key)
         except ValueError:
             return None
 
@@ -183,11 +176,11 @@ class LocatorImpl(Locator):
             if not isinstance(dep.type_hint, type):
                 continue
 
-            dep_key = InstanceKey(dep.type_hint, dep.dependency_name)
+            dep_key = DIKey.of(dep.type_hint, dep.dependency_name)
             if dep.is_optional and not self.has(dep_key):
                 continue  # Skip optional dependencies that can't be resolved
 
-            resolved_args.append(self.get(dep.type_hint, dep.dependency_name))
+            resolved_args.append(self.get(dep_key))
 
         return func(*resolved_args)
 

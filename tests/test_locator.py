@@ -7,6 +7,7 @@ import unittest
 from dataclasses import dataclass
 
 from izumi.distage import Injector, ModuleDef, Plan, PlannerInput
+from izumi.distage.model import DIKey
 
 
 class TestLocator(unittest.TestCase):
@@ -77,8 +78,8 @@ class TestLocator(unittest.TestCase):
         locator2 = injector.produce(plan)
 
         # Each locator should get its own instance
-        counter1 = locator1.get(Counter)
-        counter2 = locator2.get(Counter)
+        counter1 = locator1.get(DIKey.of(Counter))
+        counter2 = locator2.get(DIKey.of(Counter))
 
         self.assertNotEqual(counter1.id, counter2.id)
         self.assertIsNot(counter1, counter2)
@@ -99,8 +100,8 @@ class TestLocator(unittest.TestCase):
         locator = injector.produce(plan)
 
         # Same locator should return the same instance
-        service1 = locator.get(Service)
-        service2 = locator.get(Service)
+        service1 = locator.get(DIKey.of(Service))
+        service2 = locator.get(DIKey.of(Service))
 
         self.assertIs(service1, service2)
         self.assertEqual(service1.created_at, service2.created_at)
@@ -123,24 +124,25 @@ class TestLocator(unittest.TestCase):
         locator = injector.produce(plan)
 
         # Test has() method
-        from izumi.distage.model import InstanceKey
-        self.assertTrue(locator.has(InstanceKey(ExistingService)))
-        self.assertFalse(locator.has(InstanceKey(MissingService)))
+        from izumi.distage.model import DIKey
 
-        self.assertTrue(locator.has(InstanceKey(ExistingService)))
+        self.assertTrue(locator.has(DIKey.of(ExistingService)))
+        self.assertFalse(locator.has(DIKey.of(MissingService)))
+
+        self.assertTrue(locator.has(DIKey.of(ExistingService)))
 
         # Resolve the service
-        service = locator.get(ExistingService)
+        service = locator.get(DIKey.of(ExistingService))
         self.assertIsInstance(service, ExistingService)
 
         # Test has() after resolution
-        self.assertTrue(locator.has(InstanceKey(ExistingService)))
+        self.assertTrue(locator.has(DIKey.of(ExistingService)))
 
         # Test find() method
-        found_service = locator.find(InstanceKey(ExistingService))
+        found_service = locator.find(DIKey.of(ExistingService))
         self.assertIs(found_service, service)
 
-        missing_service = locator.find(InstanceKey(MissingService))
+        missing_service = locator.find(DIKey.of(MissingService))
         self.assertIsNone(missing_service)
 
     def test_backward_compatibility(self):
@@ -155,7 +157,7 @@ class TestLocator(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(Service)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(Service))
 
         self.assertIsInstance(service, Service)
         self.assertEqual(service.get_message(), "Hello World")
@@ -274,8 +276,8 @@ class TestLocator(unittest.TestCase):
         plan = injector.plan(planner_input)
         locator = injector.produce(plan)
 
-        prod_db = locator.get(str, "prod")
-        test_db = locator.get(str, "test")
+        prod_db = locator.get(DIKey.of(str, "prod"))
+        test_db = locator.get(DIKey.of(str, "test"))
 
         self.assertEqual(prod_db, "production-db")
         self.assertEqual(test_db, "test-db")
@@ -309,7 +311,7 @@ class TestLocator(unittest.TestCase):
         plan = injector.plan(planner_input)
         locator = injector.produce(plan)
 
-        service = locator.get(Service)
+        service = locator.get(DIKey.of(Service))
 
         self.assertEqual(len(service.handlers), 2)
         self.assertIn(handler1, service.handlers)

@@ -15,6 +15,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from izumi.distage import Injector, ModuleDef, PlannerInput
+from izumi.distage.model import DIKey
 
 # Example domain: A simple web service with different components
 
@@ -161,12 +162,12 @@ def main():
         planner_input = PlannerInput([prod_module])
 
         # Get various services
-        user_service = injector.produce(injector.plan(planner_input)).get(UserService)
+        user_service = injector.produce(injector.plan(planner_input)).get(DIKey.of(UserService))
         result = user_service.create_user("alice")
         print(f"Result: {result}")
 
         # Get command executor and run commands
-        executor = injector.produce(injector.plan(planner_input)).get(CommandExecutor)
+        executor = injector.produce(injector.plan(planner_input)).get(DIKey.of(CommandExecutor))
         command_results = executor.execute_all()
         for cmd_result in command_results:
             print(f"Command result: {cmd_result}")
@@ -182,11 +183,11 @@ def main():
         injector = Injector()
         planner_input = PlannerInput([prod_module, test_module])
 
-        config = injector.produce(injector.plan(planner_input)).get(Config)
+        config = injector.produce(injector.plan(planner_input)).get(DIKey.of(Config))
         print(f"Config: {config}")
 
         # This will use the test database
-        database = injector.produce(injector.plan(planner_input)).get(Database, "test")
+        database = injector.produce(injector.plan(planner_input)).get(DIKey.of(Database, "test"))
         result = database.query("SELECT * FROM users")
         print(f"Test DB result: {result}")
 

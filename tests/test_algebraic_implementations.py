@@ -12,7 +12,7 @@ from izumi.distage.functoid import (
     set_element_functoid,
     value_functoid,
 )
-from izumi.distage.model import InstanceKey, SetElementKey
+from izumi.distage.model import DIKey, InstanceKey, SetElementKey
 
 
 class TestAlgebraicImplementations(unittest.TestCase):
@@ -149,7 +149,7 @@ class TestFluentAPI(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        result = injector.produce(injector.plan(planner_input)).get(str)
+        result = injector.produce(injector.plan(planner_input)).get(DIKey.of(str))
 
         self.assertEqual(result, test_value)
 
@@ -165,7 +165,7 @@ class TestFluentAPI(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        result = injector.produce(injector.plan(planner_input)).get(TestService)
+        result = injector.produce(injector.plan(planner_input)).get(DIKey.of(TestService))
 
         self.assertIsInstance(result, TestService)
         self.assertEqual(result.get_message(), "Hello from TestService")
@@ -181,7 +181,7 @@ class TestFluentAPI(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        result = injector.produce(injector.plan(planner_input)).get(str)
+        result = injector.produce(injector.plan(planner_input)).get(DIKey.of(str))
 
         self.assertEqual(result, "factory-created-string")
 
@@ -201,7 +201,7 @@ class TestFluentAPI(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        result = injector.produce(injector.plan(planner_input)).get(str)
+        result = injector.produce(injector.plan(planner_input)).get(DIKey.of(str))
 
         self.assertEqual(result, "Service with test-config")
 
@@ -214,8 +214,8 @@ class TestFluentAPI(unittest.TestCase):
         injector = Injector()
         planner_input = PlannerInput([module])
 
-        primary = injector.produce(injector.plan(planner_input)).get(str, "primary")
-        secondary = injector.produce(injector.plan(planner_input)).get(str, "secondary")
+        primary = injector.produce(injector.plan(planner_input)).get(DIKey.of(str, "primary"))
+        secondary = injector.produce(injector.plan(planner_input)).get(DIKey.of(str, "secondary"))
 
         self.assertEqual(primary, "primary-value")
         self.assertEqual(secondary, "secondary-value")
@@ -237,7 +237,7 @@ class TestSetBindingsWithAlgebraicTypes(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(ServiceWithSet)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithSet))
 
         self.assertEqual(service.items, {"item1", "item2"})
 
@@ -272,7 +272,7 @@ class TestSetBindingsWithAlgebraicTypes(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(ServiceWithHandlers)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithHandlers))
 
         handler_names = {handler.name for handler in service.handlers}
         self.assertEqual(handler_names, {"handler1", "handler2"})
@@ -296,7 +296,7 @@ class TestSetBindingsWithAlgebraicTypes(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(ServiceWithItems)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithItems))
 
         self.assertEqual(service.items, {"factory-item1", "factory-item2"})
 
@@ -326,7 +326,9 @@ class TestSetBindingsWithAlgebraicTypes(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(ServiceWithMixedItems)
+        service = injector.produce(injector.plan(planner_input)).get(
+            DIKey.of(ServiceWithMixedItems)
+        )
 
         self.assertEqual(service.items, {"direct-item", "factory-item", "class-item"})
 
@@ -343,7 +345,7 @@ class TestSetBindingsWithAlgebraicTypes(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(ServiceWithItems)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithItems))
 
         self.assertEqual(service.items, {"item1", "item2"})
 
@@ -399,7 +401,7 @@ class TestSetElementKeyIntegration(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        app = injector.produce(injector.plan(planner_input)).get(AppWithServices)
+        app = injector.produce(injector.plan(planner_input)).get(DIKey.of(AppWithServices))
 
         self.assertEqual(len(app.services), 2)
         service_names = {service.get_name() for service in app.services}

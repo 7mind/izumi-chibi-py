@@ -7,6 +7,7 @@ import unittest
 from dataclasses import dataclass
 
 from izumi.distage import Injector, ModuleDef, PlannerInput
+from izumi.distage.model import DIKey
 from izumi.distage.model.graph import MissingBindingError
 
 
@@ -55,16 +56,16 @@ class TestLocatorInheritance(unittest.TestCase):
         child_locator = child_injector.produce(child_plan)
 
         # Verify that child can access both its own and parent's dependencies
-        api_service = child_locator.get(ApiService)
+        api_service = child_locator.get(DIKey.of(ApiService))
         self.assertIsInstance(api_service, ApiService)
         self.assertEqual(api_service.get_response(), "api-data-production")
 
         # Verify that child can access parent dependencies directly
-        config = child_locator.get(Config)
+        config = child_locator.get(DIKey.of(Config))
         self.assertIsInstance(config, Config)
         self.assertEqual(config.value, "production")
 
-        db_service = child_locator.get(DatabaseService)
+        db_service = child_locator.get(DIKey.of(DatabaseService))
         self.assertIsInstance(db_service, DatabaseService)
         self.assertEqual(db_service.get_data(), "data-production")
 
@@ -94,11 +95,11 @@ class TestLocatorInheritance(unittest.TestCase):
         child_locator = child_injector.produce(child_plan)
 
         # Child should use its own binding, not parent's
-        service = child_locator.get(Service)
+        service = child_locator.get(DIKey.of(Service))
         self.assertEqual(service.name, "child")
 
         # Parent should still have its own binding
-        parent_service = parent_locator.get(Service)
+        parent_service = parent_locator.get(DIKey.of(Service))
         self.assertEqual(parent_service.name, "parent")
 
     def test_named_bindings_inheritance(self):
@@ -163,8 +164,8 @@ class TestLocatorInheritance(unittest.TestCase):
         child_locator = child_injector.produce(child_plan)
 
         # Access named dependencies directly
-        primary_db = child_locator.get(Database, "primary")
-        cache_db = child_locator.get(Database, "cache")
+        primary_db = child_locator.get(DIKey.of(Database, "primary"))
+        cache_db = child_locator.get(DIKey.of(Database, "cache"))
 
         self.assertEqual(primary_db.name, "primary")
         self.assertEqual(cache_db.name, "cache")
@@ -215,7 +216,7 @@ class TestLocatorInheritance(unittest.TestCase):
         level3_locator = level3_injector.produce(level3_plan)
 
         # Level 3 should be able to access all services
-        level3_service = level3_locator.get(Level3Service)
+        level3_service = level3_locator.get(DIKey.of(Level3Service))
         self.assertIsInstance(level3_service, Level3Service)
         self.assertEqual(level3_service.name, "level3")
         self.assertEqual(level3_service.level1.name, "level1")
@@ -278,7 +279,7 @@ class TestLocatorInheritance(unittest.TestCase):
         parent_locator = parent_injector.produce(parent_plan)
 
         # Get singleton from parent
-        parent_singleton = parent_locator.get(SingletonService)
+        parent_singleton = parent_locator.get(DIKey.of(SingletonService))
         self.assertEqual(parent_singleton.instance_id, 1)
 
         # Create child
@@ -291,11 +292,11 @@ class TestLocatorInheritance(unittest.TestCase):
         child_locator = child_injector.produce(child_plan)
 
         # Get client service which depends on singleton
-        client_service = child_locator.get(ClientService)
+        client_service = child_locator.get(DIKey.of(ClientService))
         self.assertEqual(client_service.singleton.instance_id, 1)
 
         # Get singleton directly from child
-        child_singleton = child_locator.get(SingletonService)
+        child_singleton = child_locator.get(DIKey.of(SingletonService))
         self.assertEqual(child_singleton.instance_id, 1)
 
         # All should be the same instance

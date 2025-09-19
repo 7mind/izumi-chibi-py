@@ -43,6 +43,7 @@ class DIKey(ABC):
     def of(cls, target_type: type[T], name: str | None = None) -> InstanceKey:
         return InstanceKey.of(target_type, name)
 
+
 @dataclass(frozen=True)
 class InstanceKey(DIKey):
     """A key that identifies a specific dependency in the object graph."""

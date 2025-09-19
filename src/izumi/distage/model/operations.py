@@ -100,8 +100,7 @@ class CreateFactory(ExecutableOp):
             def __init__(self, resolve_fn: Any):
                 self._resolve_fn = resolve_fn
 
-            def get(self, target_type: type, name: str | None = None) -> Any:  # noqa: A002
-                key = InstanceKey(target_type, name)
+            def get(self, key: Any) -> Any:  # noqa: A002
                 return self._resolve_fn(key)
 
         # Use the resolve function provided during execution

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Annotated
 
 from izumi.distage import Id, Injector, ModuleDef, PlannerInput
+from izumi.distage.model import DIKey
 
 
 # Domain classes
@@ -201,7 +202,7 @@ def main():
     planner_input = PlannerInput([module])
 
     try:
-        app = injector.produce(injector.plan(planner_input)).get(Application)
+        app = injector.produce(injector.plan(planner_input)).get(DIKey.of(Application))
         result = app.run()
         print(f"\n{result}")
     except Exception as e:
@@ -211,9 +212,9 @@ def main():
     print("-" * 50)
 
     # Show individual named dependencies
-    app_name = injector.produce(injector.plan(planner_input)).get(str, "app-name")
-    version = injector.produce(injector.plan(planner_input)).get(str, "app-version")
-    cache_ttl = injector.produce(injector.plan(planner_input)).get(int, "cache-ttl")
+    app_name = injector.produce(injector.plan(planner_input)).get(DIKey.of(str, "app-name"))
+    version = injector.produce(injector.plan(planner_input)).get(DIKey.of(str, "app-version"))
+    cache_ttl = injector.produce(injector.plan(planner_input)).get(DIKey.of(int, "cache-ttl"))
 
     print(f"App Name: {app_name}")
     print(f"Version: {version}")
@@ -221,13 +222,13 @@ def main():
 
     # Show different database connections
     primary_db = injector.produce(injector.plan(planner_input)).get(
-        DatabaseConnection, "primary-db"
+        DIKey.of(DatabaseConnection, "primary-db")
     )
     replica_db = injector.produce(injector.plan(planner_input)).get(
-        DatabaseConnection, "replica-db"
+        DIKey.of(DatabaseConnection, "replica-db")
     )
     analytics_db = injector.produce(injector.plan(planner_input)).get(
-        DatabaseConnection, "analytics-db"
+        DIKey.of(DatabaseConnection, "analytics-db")
     )
 
     print(f"\nPrimary DB: {primary_db.url}")
@@ -254,7 +255,9 @@ def main():
 
     # Try to get a non-existent named dependency
     try:
-        missing = injector.produce(injector.plan(planner_input)).get(str, "non-existent-name")
+        missing = injector.produce(injector.plan(planner_input)).get(
+            DIKey.of(str, "non-existent-name")
+        )
         print(f"Unexpected success: {missing}")
     except Exception as e:
         print(f"Expected error for missing dependency: {e}")

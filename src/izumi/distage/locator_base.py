@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from .model import DIKey, InstanceKey, Plan
+from .model import DIKey, Plan
 
 T = TypeVar("T")
 
@@ -34,19 +34,18 @@ class Locator(ABC):
         """Check if this is an empty locator."""
 
     @abstractmethod
-    def get(self, target_type: type[T] | Any, name: str | None = None) -> T:
+    def get(self, key: DIKey) -> Any:
         """
-        Get an instance of the given type.
+        Get an instance for the given key.
 
         Args:
-            target_type: The type to resolve
-            name: Optional name qualifier
+            key: The DIKey to resolve
 
         Returns:
-            An instance of the requested type
+            An instance for the requested key
 
         Raises:
-            ValueError: If no binding exists for the requested type
+            ValueError: If no binding exists for the requested key
         """
 
     @abstractmethod
@@ -146,9 +145,8 @@ class LocatorEmpty(Locator):
         """Empty locator is always empty."""
         return True
 
-    def get(self, target_type: type[T] | Any, name: str | None = None) -> T:
+    def get(self, key: DIKey) -> Any:
         """Empty locator cannot provide any instances."""
-        key = InstanceKey(target_type, name)
         raise ValueError(f"Empty locator cannot provide {key}")
 
     def find(self, key: DIKey) -> Any | None:  # noqa: ARG002

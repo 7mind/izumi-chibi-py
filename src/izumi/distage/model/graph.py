@@ -219,7 +219,7 @@ class DependencyGraph:
 
                     # Check if parent locator can provide this dependency
                     try:
-                        parent_locator.get(dep_key.target_type, dep_key.name)
+                        parent_locator.get(dep_key)
                         # Parent has it, so it's OK
                         continue
                     except ValueError:

@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 
 from izumi.distage import Activation, Injector, ModuleDef, PlannerInput, Roots, StandardAxis
 from izumi.distage.activation import Axis, AxisChoiceDef
+from izumi.distage.model import DIKey
 
 
 # Define custom axis for our demo
@@ -188,7 +189,7 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=app_roots, activation=prod_activation)
-        app = injector.produce(injector.plan(planner_input)).get(Application)
+        app = injector.produce(injector.plan(planner_input)).get(DIKey.of(Application))
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -208,7 +209,7 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=app_roots, activation=test_activation)
-        app = injector.produce(injector.plan(planner_input)).get(Application)
+        app = injector.produce(injector.plan(planner_input)).get(DIKey.of(Application))
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -229,7 +230,7 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=app_roots, activation=caps_activation)
-        app = injector.produce(injector.plan(planner_input)).get(Application)
+        app = injector.produce(injector.plan(planner_input)).get(DIKey.of(Application))
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -250,7 +251,7 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=app_roots, activation=dummy_activation)
-        app = injector.produce(injector.plan(planner_input)).get(Application)
+        app = injector.produce(injector.plan(planner_input)).get(DIKey.of(Application))
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -263,7 +264,7 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=app_roots, activation=test_activation)
-        app = injector.produce(injector.plan(planner_input)).get(Application)
+        app = injector.produce(injector.plan(planner_input)).get(DIKey.of(Application))
         print("✓ Application created without UnusedService")
     except Exception as e:
         print(f"Error: {e}")
@@ -274,7 +275,7 @@ def main():
         planner_input = PlannerInput(
             [base_module], roots=Roots.everything(), activation=test_activation
         )
-        injector.produce(injector.plan(planner_input)).get(UnusedService)
+        injector.produce(injector.plan(planner_input)).get(DIKey.of(UnusedService))
         print("✓ UnusedService was created (demonstrates no garbage collection)")
     except Exception as e:
         print(f"Error: {e}")
@@ -288,8 +289,8 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=multi_roots, activation=test_activation)
-        app = injector.produce(injector.plan(planner_input)).get(Application)
-        injector.produce(injector.plan(planner_input)).get(UnusedService)
+        app = injector.produce(injector.plan(planner_input)).get(DIKey.of(Application))
+        injector.produce(injector.plan(planner_input)).get(DIKey.of(UnusedService))
         print("✓ Both Application and UnusedService created as specified by roots")
     except Exception as e:
         print(f"Error: {e}")

@@ -37,10 +37,32 @@ At this point the project is not battle-tested. Expect dragons, landmines and va
 - **Set bindings** - Collect multiple implementations into sets
 - **Locator inheritance** - Create child injectors that inherit dependencies from parent locators
 
+## Architecture
+
+Chibi Izumi follows these design principles from the original distage:
+
+1. **Non-invasive design** - Your classes remain framework-free, just use regular constructors
+2. **Type-safe bindings** - Algebraic data structure ensures binding correctness
+3. **Immutable bindings** - Bindings are defined once and cannot be modified
+4. **Explicit dependency graph** - All dependencies are explicit and traceable
+5. **Fail-fast validation** - Circular and missing dependencies are detected early
+6. **Zero-configuration features** - Automatic logger injection, factory patterns
+
+## Limitations
+
+This is a working implementation with some simplifications compared to the full distage library:
+
+- Forward references in type hints have limited support
+- No advanced lifecycle management (startup/shutdown hooks)
+- Simplified error messages compared to Scala version
+- No compile-time dependency graph visualization tools
+
+
 ## Quick Start
 
 ```python
 from izumi.distage import ModuleDef, Injector, PlannerInput
+from izumi.distage.model import DIKey
 
 # Define your classes
 class Database:
@@ -66,7 +88,7 @@ module.make(UserService).using().type(UserService)
 # Create injector and get service
 injector = Injector()
 planner_input = PlannerInput([module])
-user_service = injector.produce(injector.plan(planner_input)).get(UserService)
+user_service = injector.produce(injector.plan(planner_input)).get(DIKey.of(UserService))
 
 # Use the service
 result = user_service.create_user("alice")
@@ -146,6 +168,7 @@ Chibi Izumi automatically provides loggers for dependencies without names, creat
 ```python
 import logging
 from izumi.distage import ModuleDef, Injector, PlannerInput
+from izumi.distage.model import DIKey
 
 class Database:
     def __init__(self, connection_string: str):
@@ -172,7 +195,7 @@ module.make(UserService).using().type(UserService)
 
 injector = Injector()
 planner_input = PlannerInput([module])
-user_service = injector.produce(injector.plan(planner_input)).get(UserService)
+user_service = injector.produce(injector.plan(planner_input)).get(DIKey.of(UserService))
 ```
 
 ### Factory Bindings for Non-Singleton Semantics
@@ -182,6 +205,7 @@ Use `Factory[T]` when you need to create multiple instances with assisted inject
 ```python
 from typing import Annotated
 from izumi.distage import Factory, Id, ModuleDef, Injector, PlannerInput
+from izumi.distage.model import DIKey
 
 class Database:
     def __init__(self, connection_string: Annotated[str, Id("db-url")]):
@@ -200,7 +224,7 @@ module.make(Factory[UserSession]).using().factory_type(UserSession)
 
 injector = Injector()
 planner_input = PlannerInput([module])
-factory = injector.produce(injector.plan(planner_input)).get(Factory[UserSession])
+factory = injector.produce(injector.plan(planner_input)).get(DIKey.of(Factory[UserSession]))
 
 # Create new instances with runtime parameters
 session1 = factory.create("user123", **{"api-key": "secret1"})
@@ -215,6 +239,7 @@ Use `@Id` annotations to distinguish between multiple bindings of the same type:
 ```python
 from typing import Annotated
 from izumi.distage import Id, ModuleDef, Injector, PlannerInput
+from izumi.distage.model import DIKey
 
 class DatabaseService:
     def __init__(
@@ -232,7 +257,7 @@ module.make(DatabaseService).using().type(DatabaseService)
 
 injector = Injector()
 planner_input = PlannerInput([module])
-db_service = injector.produce(injector.plan(planner_input)).get(DatabaseService)
+db_service = injector.produce(injector.plan(planner_input)).get(DIKey.of(DatabaseService))
 ```
 
 ### Dependency Graph Validation
@@ -241,6 +266,7 @@ The dependency graph is built and validated when creating a plan:
 
 ```python
 from izumi.distage import ModuleDef, Injector, PlannerInput
+from izumi.distage.model import DIKey
 
 class A:
     def __init__(self, b: "B"):
@@ -271,6 +297,7 @@ Collect multiple implementations into a set:
 
 ```python
 from izumi.distage import ModuleDef, Injector, PlannerInput
+from izumi.distage.model import DIKey
 
 class CommandHandler:
     def handle(self, cmd: str) -> str:
@@ -295,7 +322,7 @@ module.make(CommandProcessor).using().type(CommandProcessor)
 
 injector = Injector()
 planner_input = PlannerInput([module])
-processor = injector.produce(injector.plan(planner_input)).get(CommandProcessor)
+processor = injector.produce(injector.plan(planner_input)).get(DIKey.of(CommandProcessor))
 # processor.handlers contains instances of both UserHandler and AdminHandler
 ```
 
@@ -304,7 +331,9 @@ processor = injector.produce(injector.plan(planner_input)).get(CommandProcessor)
 Activations provide a powerful mechanism to choose between alternative implementations based on configuration axes:
 
 ```python
-from izumi.distage import ModuleDef, Injector, PlannerInput, Activation, StandardAxis
+from izumi.distage import ModuleDef, Injector, PlannerInput
+from izumi.distage.model import DIKey
+from izumi.distage.activation import Activation, StandardAxis
 
 # Define different implementations for different environments
 class Database:
@@ -338,11 +367,11 @@ injector = Injector()
 
 # Production setup
 prod_input = PlannerInput([module], activation=prod_activation)
-prod_db = injector.produce(injector.plan(prod_input)).get(Database)  # Gets PostgresDatabase
+prod_db = injector.produce(injector.plan(prod_input)).get(DIKey.of(Database))  # Gets PostgresDatabase
 
 # Test setup
 test_input = PlannerInput([module], activation=test_activation)
-test_db = injector.produce(injector.plan(test_input)).get(Database)  # Gets MockDatabase
+test_db = injector.produce(injector.plan(test_input)).get(DIKey.of(Database))  # Gets MockDatabase
 ```
 
 ## Advanced Usage Patterns
@@ -351,6 +380,7 @@ test_db = injector.produce(injector.plan(test_input)).get(Database)  # Gets Mock
 
 ```python
 from izumi.distage import ModuleDef, Injector, PlannerInput
+from izumi.distage.model import DIKey
 
 class Config:
     def __init__(self, default_user: str = "test"):
@@ -373,7 +403,7 @@ planner_input = PlannerInput([module])
 # Pattern 1: Plan + Locator (most control)
 plan = injector.plan(planner_input)
 locator = injector.produce(plan)
-service = locator.get(UserService)
+service = locator.get(DIKey.of(UserService))
 
 # Pattern 2: Function injection (recommended)
 def business_logic(service: UserService, config: Config) -> str:
@@ -382,7 +412,7 @@ def business_logic(service: UserService, config: Config) -> str:
 result = injector.produce_run(planner_input, business_logic)
 
 # Pattern 3: Simple get (for quick usage)
-service = injector.produce(injector.plan(planner_input)).get(UserService)
+service = injector.produce(injector.plan(planner_input)).get(DIKey.of(UserService))
 ```
 
 ### Locator Inheritance
@@ -391,6 +421,7 @@ Locator inheritance allows you to create child injectors that inherit dependenci
 
 ```python
 from izumi.distage import ModuleDef, Injector, PlannerInput
+from izumi.distage.model import DIKey
 
 # Shared services
 class DatabaseConfig:
@@ -448,8 +479,8 @@ report_plan = report_injector.plan(report_input)
 report_locator = report_injector.produce(report_plan)
 
 # 4. Use the services - child locators inherit parent dependencies
-user_service = user_locator.get(UserService)  # UserService + Database + DatabaseConfig
-report_service = report_locator.get(ReportService)  # ReportService + Database + DatabaseConfig
+user_service = user_locator.get(DIKey.of(UserService))  # UserService + Database + DatabaseConfig
+report_service = report_locator.get(DIKey.of(ReportService))  # ReportService + Database + DatabaseConfig
 
 print(user_service.create_user("alice"))
 print(report_service.generate_report())
@@ -463,26 +494,6 @@ Key benefits of locator inheritance:
 - **Instance reuse**: Parent instances are shared across all children (singleton behavior preserved)
 - **Override capability**: Child bindings take precedence over parent bindings
 - **Multi-level inheritance**: Create inheritance chains for complex scenarios
-
-## Architecture
-
-Chibi Izumi follows these design principles from the original distage:
-
-1. **Non-invasive design** - Your classes remain framework-free, just use regular constructors
-2. **Type-safe bindings** - Algebraic data structure ensures binding correctness
-3. **Immutable bindings** - Bindings are defined once and cannot be modified
-4. **Explicit dependency graph** - All dependencies are explicit and traceable
-5. **Fail-fast validation** - Circular and missing dependencies are detected early
-6. **Zero-configuration features** - Automatic logger injection, factory patterns
-
-## Limitations
-
-This is a working implementation with some simplifications compared to the full distage library:
-
-- Forward references in type hints have limited support
-- No advanced lifecycle management (startup/shutdown hooks)
-- Simplified error messages compared to Scala version
-- No compile-time dependency graph visualization tools
 
 ## TODO: Future Features
 

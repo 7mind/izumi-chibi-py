@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Annotated
 
 from izumi.distage import Id, Injector, ModuleDef, PlannerInput
+from izumi.distage.model import DIKey
 
 
 class TestNamedDependencies(unittest.TestCase):
@@ -39,8 +40,8 @@ class TestNamedDependencies(unittest.TestCase):
         injector = Injector()
         planner_input = PlannerInput([module])
 
-        primary = injector.produce(injector.plan(planner_input)).get(str, "primary")
-        secondary = injector.produce(injector.plan(planner_input)).get(str, "secondary")
+        primary = injector.produce(injector.plan(planner_input)).get(DIKey.of(str, "primary"))
+        secondary = injector.produce(injector.plan(planner_input)).get(DIKey.of(str, "secondary"))
 
         self.assertEqual(primary, "primary-string")
         self.assertEqual(secondary, "secondary-string")
@@ -62,7 +63,7 @@ class TestNamedDependencies(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(DatabaseService)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(DatabaseService))
 
         self.assertEqual(service.host, "localhost")
         self.assertEqual(service.port, 5432)
@@ -85,7 +86,9 @@ class TestNamedDependencies(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        connection_string = injector.produce(injector.plan(planner_input)).get(str, "connection")
+        connection_string = injector.produce(injector.plan(planner_input)).get(
+            DIKey.of(str, "connection")
+        )
 
         self.assertEqual(connection_string, "postgresql://localhost:5432/myapp")
 
@@ -105,7 +108,7 @@ class TestNamedDependencies(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        config = injector.produce(injector.plan(planner_input)).get(Config)
+        config = injector.produce(injector.plan(planner_input)).get(DIKey.of(Config))
 
         self.assertEqual(config.host, "0.0.0.0")
         self.assertEqual(config.port, 8080)
@@ -137,7 +140,7 @@ class TestNamedDependencies(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(Service)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(Service))
 
         self.assertEqual(service.logger.name, "default-logger")
         self.assertEqual(service.api_key, "secret-key-123")
@@ -202,7 +205,7 @@ class TestNamedDependencies(unittest.TestCase):
         from izumi.distage.model.graph import MissingBindingError
 
         with self.assertRaises(MissingBindingError) as cm:
-            injector.produce(injector.plan(planner_input)).get(Service)
+            injector.produce(injector.plan(planner_input)).get(DIKey.of(Service))
 
         error_message = str(cm.exception)
         self.assertIn("No binding found", error_message)
@@ -227,7 +230,7 @@ class TestNamedDependencies(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(Service)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(Service))
 
         self.assertEqual(service.required, "required-value")
         self.assertEqual(service.optional, "default")
@@ -271,7 +274,7 @@ class TestNamedDependencies(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        app = injector.produce(injector.plan(planner_input)).get(Application)
+        app = injector.produce(injector.plan(planner_input)).get(DIKey.of(Application))
 
         self.assertEqual(app.app_name, "UserApp")
         self.assertEqual(app.version, "1.0.0")
@@ -295,7 +298,7 @@ class TestNamedDependencies(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        log_format = injector.produce(injector.plan(planner_input)).get(str, "log-format")
+        log_format = injector.produce(injector.plan(planner_input)).get(DIKey.of(str, "log-format"))
 
         self.assertEqual(log_format, "[LOG:INFO]")
 

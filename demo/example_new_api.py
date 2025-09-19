@@ -6,6 +6,7 @@ Example demonstrating the new PlannerInput-based API that matches the original d
 from typing import Annotated
 
 from izumi.distage import Id, Injector, ModuleDef, PlannerInput
+from izumi.distage.model import DIKey
 
 
 class Database:
@@ -42,7 +43,7 @@ def main():
     locator = injector.produce(plan)
 
     # Get individual services
-    user_service = locator.get(UserService)
+    user_service = locator.get(DIKey.of(UserService))
     result1 = user_service.get_user(123)
     print(f"Result 1: {result1}")
 
@@ -62,8 +63,8 @@ def main():
     locator1 = injector.produce(plan)
     locator2 = injector.produce(plan)
 
-    db1 = locator1.get(Database)
-    db2 = locator2.get(Database)
+    db1 = locator1.get(DIKey.of(Database))
+    db2 = locator2.get(DIKey.of(Database))
 
     print(f"Database 1 ID: {id(db1)}")
     print(f"Database 2 ID: {id(db2)}")
@@ -101,12 +102,12 @@ def main():
 
     named_input = PlannerInput([named_module])
     locator = injector.produce(injector.plan(named_input))
-    service = locator.get(ConfigurableService)
+    service = locator.get(DIKey.of(ConfigurableService))
     print(f"Named dependency result: {service.make_api_call()}")
 
     # Demonstrate accessing named dependencies directly
-    api_key = locator.get(str, "api-key")
-    timeout = locator.get(int, "timeout")
+    api_key = locator.get(DIKey.of(str, "api-key"))
+    timeout = locator.get(DIKey.of(int, "timeout"))
     print(f"Direct access - API Key: {api_key}, Timeout: {timeout}")
 
 
