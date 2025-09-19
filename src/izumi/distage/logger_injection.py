@@ -13,7 +13,7 @@ from types import FrameType
 from typing import Any
 
 from .bindings import Binding
-from .implementation import ImplFunc
+from .functoid import function_functoid
 from .keys import DIKey
 
 
@@ -191,11 +191,11 @@ class AutoLoggerManager:
         # Create the binding key for the named logger
         logger_key = DIKey(logging.Logger, logger_name)
 
-        # Create the implementation
-        impl = ImplFunc(factory)
+        # Create the functoid
+        functoid = function_functoid(factory)
 
         # Create and return the binding
-        return Binding(logger_key, impl)
+        return Binding(logger_key, functoid)
 
     @staticmethod
     def should_auto_inject_logger(key: DIKey) -> bool:

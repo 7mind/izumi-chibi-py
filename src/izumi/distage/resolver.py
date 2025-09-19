@@ -10,10 +10,10 @@ from typing import Any
 
 from .activation import Activation
 from .bindings import Binding
+from .functoid import Functoid
 from .graph import DependencyGraph
-from .implementation import ImplClass, ImplFunc, ImplSetElement, ImplValue
 from .introspection import SignatureIntrospector
-from .keys import DIKey, SetElementKey
+from .keys import DIKey
 from .roots import Roots
 
 
@@ -96,24 +96,31 @@ class DependencyResolver:
 
     def _create_from_binding(self, binding: Binding) -> Any:
         """Create an instance from a specific binding."""
-        impl = binding.implementation
+        functoid = binding.functoid
+        return self._call_functoid(functoid)
 
-        if isinstance(impl, ImplValue):
-            return impl.value
-        elif isinstance(impl, ImplClass):
-            return self._instantiate_class(impl.cls)
-        elif isinstance(impl, ImplFunc):
-            return self._call_factory(impl.func)
-        elif isinstance(impl, ImplSetElement):
-            # For set elements, we need to create a proper key for the wrapped implementation
-            if isinstance(binding.key, SetElementKey):
-                element_key = binding.key.element_key
-            else:
-                element_key = binding.key
-            # Delegate to the wrapped implementation
-            return self._create_from_binding(Binding(element_key, impl.impl))
+    def _create_from_functoid_direct(self, functoid: Functoid[Any]) -> Any:
+        """Create an instance directly from a functoid."""
+        return self._call_functoid(functoid)
+
+    def _call_functoid(self, functoid: Functoid[Any]) -> Any:
+        """Call a functoid by resolving its dependencies."""
+        # Get the functoid's dependencies
+        dependency_keys = functoid.keys()
+
+        # If no dependencies, just call it
+        if not dependency_keys:
+            return functoid.call()
+
+        # For dependencies, we need to resolve them and call with proper parameter mapping
+        # Use existing helper methods that handle parameter name mapping correctly
+        if functoid.original_class is not None:
+            return self._instantiate_class(functoid.original_class)
+        elif functoid.original_func is not None:
+            return self._call_factory(functoid.original_func)
         else:
-            raise ValueError(f"Unknown implementation type: {type(impl)}")
+            # For other cases (like composed functoids), try calling with no args
+            return functoid.call()
 
     def _instantiate_class(self, cls: type | Any | Callable[..., Any]) -> Any:
         """Instantiate a class by resolving its dependencies."""

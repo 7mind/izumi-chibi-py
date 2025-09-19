@@ -9,13 +9,13 @@ from dataclasses import dataclass
 from typing import Any, TypeVar
 
 from .bindings import Binding
-from .implementation import (
-    ImplClass,
-    Implementation,
-    ImplFunc,
-    ImplSetElement,
-    ImplValue,
-    UsingBuilder,
+from .functoid import (
+    Functoid,
+    class_functoid,
+    factory_functoid,
+    function_functoid,
+    set_element_functoid,
+    value_functoid,
 )
 from .keys import DIKey, SetElementKey
 from .tag import Tag
@@ -75,7 +75,7 @@ class BindingBuilder[T]:
     def using(self) -> UsingBuilder[T]:
         """Create a UsingBuilder for fluent binding configuration."""
 
-        def finalize_binding(implementation: Implementation) -> None:
+        def finalize_binding(functoid: Functoid[T]) -> None:
             key = DIKey(self._target_type, self._name)
 
             # Convert tag to activation_tags if it's an AxisChoiceDef
@@ -86,8 +86,8 @@ class BindingBuilder[T]:
                 if isinstance(self._tag, AxisChoiceDef):
                     activation_tags.add(self._tag)
 
-            # Create binding with the implementation
-            binding = Binding(key, implementation, activation_tags)
+            # Create binding with the functoid
+            binding = Binding(key, functoid, activation_tags)
             self._module.add_binding(binding)
 
         return UsingBuilder(self._target_type, finalize_binding)
@@ -116,8 +116,8 @@ class SetBindingBuilder[T]:
         set_key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
         element_key = DIKey(self._target_type, self._generate_element_name())
         key = SetElementKey(set_key, element_key)
-        impl = ImplSetElement(ImplValue(instance))
-        binding = Binding(key, impl)
+        functoid = set_element_functoid(value_functoid(instance))
+        binding = Binding(key, functoid)
         self._module.add_binding(binding)
         return self
 
@@ -126,8 +126,8 @@ class SetBindingBuilder[T]:
         set_key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
         element_key = DIKey(self._target_type, self._generate_element_name())
         key = SetElementKey(set_key, element_key)
-        impl = ImplSetElement(ImplClass(cls))
-        binding = Binding(key, impl)
+        functoid = set_element_functoid(class_functoid(cls))
+        binding = Binding(key, functoid)
         self._module.add_binding(binding)
         return self
 
@@ -136,22 +136,35 @@ class SetBindingBuilder[T]:
         set_key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
         element_key = DIKey(self._target_type, self._generate_element_name())
         key = SetElementKey(set_key, element_key)
-        impl = ImplSetElement(ImplFunc(factory))
-        binding = Binding(key, impl)
+        functoid = set_element_functoid(function_functoid(factory))
+        binding = Binding(key, functoid)
         self._module.add_binding(binding)
         return self
 
 
-class FactoryBindingBuilder[T]:
-    """Builder for creating factory bindings."""
+class UsingBuilder[T]:
+    """Builder for creating functoid-based bindings with a fluent API."""
 
-    def __init__(self, factory_type: type[T], module: ModuleDef):
-        self._factory_type = factory_type
-        self._module = module
+    def __init__(self, target_type: type[T], finalize_callback: Callable[[Functoid[T]], None]):
+        self._target_type = target_type
+        self._finalize_callback = finalize_callback
 
-    def from_factory(self, factory_impl: type[T]) -> None:
-        """Bind the factory to a specific implementation."""
-        key = DIKey(self._factory_type, None)
-        impl = ImplClass(factory_impl)
-        binding = Binding(key, impl)
-        self._module.add_binding(binding)
+    def value(self, instance: T) -> None:
+        """Bind to a specific instance value."""
+        functoid = value_functoid(instance)
+        self._finalize_callback(functoid)
+
+    def type(self, cls: type[T]) -> None:
+        """Bind to a class that will be instantiated."""
+        functoid = class_functoid(cls)
+        self._finalize_callback(functoid)
+
+    def func(self, factory: Callable[..., T]) -> None:
+        """Bind to a factory function."""
+        functoid = function_functoid(factory)
+        self._finalize_callback(functoid)
+
+    def factory(self, target_type: type[T]) -> None:  # type: ignore[valid-type]
+        """Bind to a Factory[T] that creates instances on-demand."""
+        functoid: Functoid[T] = factory_functoid(target_type)
+        self._finalize_callback(functoid)

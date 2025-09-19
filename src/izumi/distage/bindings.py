@@ -11,7 +11,7 @@ from .activation import Activation
 from .keys import DIKey, SetElementKey
 
 if TYPE_CHECKING:
-    from .implementation import Implementation
+    from .functoid import Functoid
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,7 @@ class Binding:
     """A dependency injection binding."""
 
     key: DIKey | SetElementKey
-    implementation: Implementation
+    functoid: Functoid[Any]
     activation_tags: set[Any] | None = None  # Use Any to avoid circular import issues
 
     def __post_init__(self) -> None:
@@ -34,12 +34,30 @@ class Binding:
         return activation.is_compatible_with_tags(self.activation_tags)
 
     def __str__(self) -> str:
-        impl_name = getattr(
-            self.implementation.get_value(), "__name__", str(self.implementation.get_value())
-        )
+        # Extract name from the functoid for display
+        if self.functoid.original_class is not None:
+            impl_name = getattr(
+                self.functoid.original_class, "__name__", str(self.functoid.original_class)
+            )
+        elif self.functoid.original_func is not None:
+            impl_name = getattr(
+                self.functoid.original_func, "__name__", str(self.functoid.original_func)
+            )
+        elif self.functoid.original_value is not None:
+            impl_name = str(self.functoid.original_value)
+        elif self.functoid.original_target_type is not None:
+            impl_name = getattr(
+                self.functoid.original_target_type,
+                "__name__",
+                str(self.functoid.original_target_type),
+            )
+        else:
+            impl_name = str(self.functoid)
+
         tags_str = (
             f" {{{', '.join(str(tag) for tag in self.activation_tags)}}}"
             if self.activation_tags
             else ""
         )
-        return f"{self.key} -> {impl_name}{tags_str} ({type(self.implementation).__name__})"
+        functoid_repr = repr(self.functoid)
+        return f"{self.key} -> {impl_name}{tags_str} ({functoid_repr})"

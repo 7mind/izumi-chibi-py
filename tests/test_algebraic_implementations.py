@@ -6,76 +6,92 @@ Unit tests for the new algebraic implementation structure.
 import unittest
 
 from izumi.distage import Injector, ModuleDef, PlannerInput
-from izumi.distage.implementation import ImplClass, ImplFunc, ImplSetElement, ImplValue
+from izumi.distage.functoid import (
+    class_functoid,
+    function_functoid,
+    set_element_functoid,
+    value_functoid,
+)
 from izumi.distage.keys import DIKey, SetElementKey
 
 
 class TestAlgebraicImplementations(unittest.TestCase):
     """Test algebraic implementation types."""
 
-    def test_impl_value(self):
-        """Test ImplValue implementation."""
+    def test_value_functoid(self):
+        """Test value_functoid implementation."""
         value = "test-value"
-        impl = ImplValue(value)
+        functoid = value_functoid(value)
 
-        self.assertEqual(impl.get_value(), value)
-        self.assertEqual(repr(impl), "ImplValue('test-value')")
+        # For value functoids, call() returns the value directly
+        self.assertEqual(functoid.keys(), [])
+        self.assertEqual(functoid.call(), value)
+        self.assertTrue("ValueFunctoid" in repr(functoid))
 
-    def test_impl_class(self):
-        """Test ImplClass implementation."""
+    def test_class_functoid(self):
+        """Test class_functoid implementation."""
 
         class TestClass:
             pass
 
-        impl = ImplClass(TestClass)
+        functoid = class_functoid(TestClass)
 
-        self.assertEqual(impl.get_value(), TestClass)
-        self.assertTrue(repr(impl).startswith("ImplClass(<class"))
+        # For class functoids, call() creates an instance
+        self.assertEqual(functoid.keys(), [])  # TestClass has no dependencies
+        instance = functoid.call()
+        self.assertIsInstance(instance, TestClass)
+        self.assertTrue("ClassFunctoid" in repr(functoid))
 
-    def test_impl_func(self):
-        """Test ImplFunc implementation."""
+    def test_function_functoid(self):
+        """Test function_functoid implementation."""
 
         def test_func() -> str:
             return "test-result"
 
-        impl = ImplFunc(test_func)
+        functoid = function_functoid(test_func)
 
-        self.assertEqual(impl.get_value(), test_func)
-        self.assertTrue(repr(impl).startswith("ImplFunc(<function"))
+        # For function functoids, we can verify it by calling it
+        self.assertEqual(functoid.keys(), [])  # test_func has no dependencies
+        self.assertEqual(functoid.call(), "test-result")
+        self.assertTrue("FunctionFunctoid" in repr(functoid))
 
-    def test_impl_set_element_with_value(self):
-        """Test ImplSetElement wrapping ImplValue."""
+    def test_set_element_functoid_with_value(self):
+        """Test set_element_functoid wrapping value_functoid."""
         value = "element-value"
-        inner_impl = ImplValue(value)
-        set_impl = ImplSetElement(inner_impl)
+        inner_functoid = value_functoid(value)
+        set_functoid = set_element_functoid(inner_functoid)
 
-        self.assertEqual(set_impl.get_value(), value)
-        self.assertEqual(set_impl.impl, inner_impl)
-        self.assertEqual(repr(set_impl), "ImplSetElement(ImplValue('element-value'))")
+        # SetElementFunctoid delegates to inner functoid
+        self.assertEqual(set_functoid.keys(), [])
+        self.assertEqual(set_functoid.call(), value)
+        self.assertTrue("SetElementFunctoid" in repr(set_functoid))
 
-    def test_impl_set_element_with_class(self):
-        """Test ImplSetElement wrapping ImplClass."""
+    def test_set_element_functoid_with_class(self):
+        """Test set_element_functoid wrapping class_functoid."""
 
         class TestClass:
             pass
 
-        inner_impl = ImplClass(TestClass)
-        set_impl = ImplSetElement(inner_impl)
+        inner_functoid = class_functoid(TestClass)
+        set_functoid = set_element_functoid(inner_functoid)
 
-        self.assertEqual(set_impl.get_value(), TestClass)
-        self.assertEqual(set_impl.impl, inner_impl)
+        # SetElementFunctoid delegates to inner functoid
+        self.assertEqual(set_functoid.keys(), [])
+        instance = set_functoid.call()
+        self.assertIsInstance(instance, TestClass)
 
-    def test_impl_set_element_with_func(self):
-        """Test ImplSetElement wrapping ImplFunc."""
+    def test_set_element_functoid_with_func(self):
+        """Test set_element_functoid wrapping function_functoid."""
 
         def test_func() -> str:
             return "func-result"
 
-        inner_impl = ImplFunc(test_func)
-        set_impl = ImplSetElement(inner_impl)
+        inner_functoid = function_functoid(test_func)
+        set_functoid = set_element_functoid(inner_functoid)
 
-        self.assertEqual(set_impl.get_value(), test_func)
-        self.assertEqual(set_impl.impl, inner_impl)
+        # SetElementFunctoid delegates to inner functoid
+        self.assertEqual(set_functoid.keys(), [])
+        self.assertEqual(set_functoid.call(), "func-result")
 
 
 class TestSetElementKey(unittest.TestCase):

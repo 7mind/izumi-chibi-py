@@ -105,9 +105,11 @@ class TestAutoLoggerManager(unittest.TestCase):
         self.assertEqual(binding.key, expected_key)
 
         # Check that binding creates the right logger
-        from izumi.distage.implementation import ImplFunc
+        from izumi.distage.functoid import Functoid
 
-        self.assertIsInstance(binding.implementation, ImplFunc)
+        self.assertIsInstance(binding.functoid, Functoid)
+        # Verify it's a function functoid by checking it has an original_func
+        self.assertIsNotNone(binding.functoid.original_func)
 
     def test_rewrite_logger_key(self):
         """Test logger key rewriting."""

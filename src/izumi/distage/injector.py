@@ -10,10 +10,10 @@ from collections.abc import Callable
 from typing import Any, TypeVar
 
 from .bindings import Binding
+from .functoid import Functoid
 from .graph import DependencyGraph
-from .implementation import ImplClass, ImplFactory, ImplFunc, ImplSetElement, ImplValue
 from .introspection import SignatureIntrospector
-from .keys import DIKey, SetElementKey
+from .keys import DIKey
 from .locator import Locator
 from .logger_injection import AutoLoggerManager
 from .plan import Plan
@@ -234,27 +234,40 @@ class Injector:
 
     def _create_from_binding(self, binding: Binding, resolve_fn: Callable[[DIKey], Any]) -> Any:
         """Create an instance from a specific binding."""
-        impl = binding.implementation
+        functoid = binding.functoid
 
-        if isinstance(impl, ImplValue):
-            return impl.value
-        elif isinstance(impl, ImplClass):
-            return self._instantiate_class(impl.cls, resolve_fn)
-        elif isinstance(impl, ImplFunc):
-            return self._call_factory(impl.func, resolve_fn)
-        elif isinstance(impl, ImplSetElement):
-            # For set elements, we need to create a proper key for the wrapped implementation
-            if isinstance(binding.key, SetElementKey):
-                element_key = binding.key.element_key
-            else:
-                element_key = binding.key
-            # Delegate to the wrapped implementation
-            return self._create_from_binding(Binding(element_key, impl.impl), resolve_fn)
-        elif isinstance(impl, ImplFactory):
+        # Handle factory functoids specially
+        if functoid.original_target_type is not None:
             # For factory bindings, create a Factory[T] instance
-            return self._create_factory(impl.target_type, resolve_fn)
+            return self._create_factory(functoid.original_target_type, resolve_fn)
         else:
-            raise ValueError(f"Unknown implementation type: {type(impl)}")
+            # For all other functoids, resolve dependencies and call
+            return self._call_functoid(functoid, resolve_fn)
+
+    def _create_from_functoid_direct(
+        self, functoid: Functoid[Any], resolve_fn: Callable[[DIKey], Any]
+    ) -> Any:
+        """Create an instance directly from a functoid."""
+        return self._call_functoid(functoid, resolve_fn)
+
+    def _call_functoid(self, functoid: Functoid[Any], resolve_fn: Callable[[DIKey], Any]) -> Any:
+        """Call a functoid by resolving its dependencies."""
+        # Get the functoid's dependencies
+        dependency_keys = functoid.keys()
+
+        # If no dependencies, just call it
+        if not dependency_keys:
+            return functoid.call()
+
+        # For dependencies, we need to resolve them and call with proper parameter mapping
+        # Use existing helper methods that handle parameter name mapping correctly
+        if functoid.original_class is not None:
+            return self._instantiate_class(functoid.original_class, resolve_fn)
+        elif functoid.original_func is not None:
+            return self._call_factory(functoid.original_func, resolve_fn)
+        else:
+            # For other cases (like composed functoids), try calling with no args
+            return functoid.call()
 
     def _instantiate_class(
         self, cls: type | Any | Callable[..., Any], resolve_fn: Callable[[DIKey], Any]

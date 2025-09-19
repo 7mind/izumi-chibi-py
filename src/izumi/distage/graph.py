@@ -10,8 +10,6 @@ from typing import TYPE_CHECKING
 
 from .activation import Activation
 from .bindings import Binding
-from .implementation import ImplClass, ImplFunc, ImplSetElement, ImplValue
-from .introspection import SignatureIntrospector
 from .keys import DIKey, SetElementKey
 
 if TYPE_CHECKING:
@@ -153,21 +151,11 @@ class DependencyGraph:
 
     def _extract_dependencies(self, binding: Binding) -> list[DIKey]:
         """Extract dependency keys from a binding."""
-        impl = binding.implementation
+        functoid = binding.functoid
 
-        # Value and set element implementations have no dependencies
-        if isinstance(impl, (ImplValue, ImplSetElement)):
-            return []
-
+        # Use the functoid's keys() method to get dependencies
         try:
-            if isinstance(impl, ImplClass):
-                dependencies = SignatureIntrospector.extract_dependencies(impl.cls)
-            elif isinstance(impl, ImplFunc):
-                dependencies = SignatureIntrospector.extract_dependencies(impl.func)
-            else:
-                return []
-
-            return SignatureIntrospector.get_binding_keys(dependencies)
+            return functoid.keys()
         except Exception:
             # If introspection fails, assume no dependencies
             return []

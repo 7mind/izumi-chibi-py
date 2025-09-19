@@ -383,15 +383,15 @@ class TestFactoryRepr(unittest.TestCase):
         factory = Factory(TestService, MockLocator())
         self.assertEqual(repr(factory), "Factory[TestService]")
 
-    def test_factory_impl_repr(self):
-        """Test FactoryImpl __repr__ method."""
-        from izumi.distage.implementation import ImplFactory
+    def test_factory_functoid_repr(self):
+        """Test factory_functoid __repr__ method."""
+        from izumi.distage.functoid import factory_functoid
 
         class TestService:
             pass
 
-        impl = ImplFactory(TestService)
-        self.assertEqual(repr(impl), "ImplFactory(TestService)")
+        functoid = factory_functoid(TestService)
+        self.assertTrue("FactoryFunctoid(TestService)" in repr(functoid))
 
 
 if __name__ == "__main__":
