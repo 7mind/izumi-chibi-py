@@ -59,6 +59,7 @@ class DependencyGraph:
         self._nodes: dict[InstanceKey, GraphNode] = {}
         self._set_bindings: dict[InstanceKey, list[Binding]] = defaultdict(list)
         self._set_lookup_operations: dict[InstanceKey, list[Lookup]] = defaultdict(list)
+        self._all_set_keys: set[InstanceKey] = set()  # Track all set keys ever registered
         self._validated = False
 
     def add_binding(self, binding: Binding) -> None:
@@ -66,6 +67,7 @@ class DependencyGraph:
         # Check if this is a set element binding using SetElementKey
         if isinstance(binding.key, SetElementKey):
             self._set_bindings[binding.key.set_key].append(binding)
+            self._all_set_keys.add(binding.key.set_key)
         else:
             # Group alternatives by type only (ignore tag for activation purposes)
             type_key = InstanceKey(binding.key.target_type, None)
@@ -85,6 +87,7 @@ class DependencyGraph:
         # If this lookup operation is for a set element, track it
         if lookup_op.set_key is not None:
             self._set_lookup_operations[lookup_op.set_key].append(lookup_op)
+            self._all_set_keys.add(lookup_op.set_key)
 
         self._validated = False
 
@@ -128,6 +131,9 @@ class DependencyGraph:
         self._operations.clear()
         self._operations.update(existing_lookup_operations)
 
+        # Filter weak references before generating operations
+        self._filter_weak_references()
+
         # Create operations for regular bindings
         for key, binding in self._bindings.items():
             if binding.is_factory:
@@ -147,8 +153,8 @@ class DependencyGraph:
                 self._operations[key] = Provide(binding)
 
         # Create CreateSet operations for set bindings
-        all_set_keys = set(self._set_bindings.keys()) | set(self._set_lookup_operations.keys())
-        for set_key in all_set_keys:
+        # Use all set keys that were ever registered, even if all elements were filtered out
+        for set_key in self._all_set_keys:
             element_keys: list[InstanceKey] = []
 
             # Add elements from bindings
@@ -166,9 +172,8 @@ class DependencyGraph:
                 # Lookup operations are already added to _operations in add_lookup_operation
                 element_keys.append(lookup_op.key())
 
-            # Create CreateSet operation to collect all elements
-            if element_keys:
-                self._operations[set_key] = CreateSet(set_key, element_keys)
+            # Create CreateSet operation to collect all elements (even if empty)
+            self._operations[set_key] = CreateSet(set_key, element_keys)
 
     def validate(self) -> None:
         """Validate the dependency graph."""
@@ -329,6 +334,68 @@ class DependencyGraph:
             raise CircularDependencyError([])
 
         return result
+
+    def _filter_weak_references(self) -> None:
+        """Filter out weak references that don't have non-weak counterparts."""
+        # Find all keys that have non-weak references pointing to them
+        keys_with_non_weak_refs: set[InstanceKey] = set()
+
+        # Check lookup operations to see which source keys have non-weak references
+        for lookup_ops_list in self._set_lookup_operations.values():
+            for lookup_op in lookup_ops_list:
+                if not lookup_op.is_weak:
+                    keys_with_non_weak_refs.add(lookup_op.source_key)
+
+        # Check set bindings to see which element keys have non-weak references
+        for bindings_list in self._set_bindings.values():
+            for binding in bindings_list:
+                if not binding.is_weak and isinstance(binding.key, SetElementKey):
+                    # For set element bindings, we need to check the element key
+                    keys_with_non_weak_refs.add(binding.key.element_key)
+
+        # Regular bindings are always kept if they're not weak
+        # (they don't need to be "referenced" to exist)
+
+        # Filter out weak lookup operations that don't have non-weak counterparts
+        filtered_lookup_operations: dict[InstanceKey, list[Lookup]] = {}
+        for set_key, lookup_ops_list in self._set_lookup_operations.items():
+            filtered_lookup_ops_list: list[Lookup] = []
+            for lookup_op in lookup_ops_list:
+                if not lookup_op.is_weak or lookup_op.source_key in keys_with_non_weak_refs:
+                    filtered_lookup_ops_list.append(lookup_op)
+            if filtered_lookup_ops_list:
+                filtered_lookup_operations[set_key] = filtered_lookup_ops_list
+        self._set_lookup_operations = filtered_lookup_operations
+
+        # Also filter out weak lookup operations from the main operations dict
+        filtered_operations: dict[InstanceKey, ExecutableOp] = {}
+        for key, operation in self._operations.items():
+            if isinstance(operation, Lookup):
+                if not operation.is_weak or operation.source_key in keys_with_non_weak_refs:
+                    filtered_operations[key] = operation
+            else:
+                filtered_operations[key] = operation
+        self._operations = filtered_operations
+
+        # Filter out weak set bindings that don't have non-weak counterparts
+        filtered_set_bindings: dict[InstanceKey, list[Binding]] = {}
+        for set_key, bindings_list in self._set_bindings.items():
+            filtered_bindings_list: list[Binding] = []
+            for binding in bindings_list:
+                if isinstance(binding.key, SetElementKey) and (
+                    not binding.is_weak or binding.key.element_key in keys_with_non_weak_refs
+                ):
+                    filtered_bindings_list.append(binding)
+            if filtered_bindings_list:
+                filtered_set_bindings[set_key] = filtered_bindings_list
+        self._set_bindings = filtered_set_bindings
+
+        # Filter out weak regular bindings that don't have non-weak counterparts
+        filtered_bindings: dict[InstanceKey, Binding] = {}
+        for key, binding in self._bindings.items():
+            if not binding.is_weak or key in keys_with_non_weak_refs:
+                filtered_bindings[key] = binding
+        self._bindings = filtered_bindings
 
     def filter_bindings_by_activation(self, activation: Activation) -> None:
         """Filter bindings based on activation, selecting the best match for each key."""

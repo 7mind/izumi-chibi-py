@@ -474,5 +474,190 @@ class TestSetRefFunctionality(unittest.TestCase):
         self.assertEqual(handler_names, {"direct", "shared"})
 
 
+class TestWeakReferenceFunctionality(unittest.TestCase):
+    """Test the .weak() functionality for sets."""
+
+    def test_weak_reference_with_existing_binding(self):
+        """Test that .weak() includes the binding when a non-weak reference exists."""
+
+        class Handler:
+            def __init__(self, name: str):
+                self.name = name
+
+        class ServiceWithHandlers:
+            def __init__(self, handlers: set[Handler]):
+                self.handlers = handlers
+
+        module = ModuleDef()
+
+        # Create a binding
+        module.make(Handler).named("optional").using().value(Handler("optional"))
+
+        # Add non-weak reference to the set
+        module.many(Handler).ref(DIKey.of(Handler, "optional"))
+
+        # Add weak reference to the same binding
+        module.many(Handler).weak(DIKey.of(Handler, "optional"))
+
+        module.make(ServiceWithHandlers).using().type(ServiceWithHandlers)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithHandlers))
+
+        # Should have the handler (included because of non-weak reference)
+        self.assertEqual(len(service.handlers), 1)
+        handler_names = {handler.name for handler in service.handlers}
+        self.assertEqual(handler_names, {"optional"})
+
+    def test_weak_reference_without_non_weak_counterpart(self):
+        """Test that .weak() results in empty set when no non-weak reference exists."""
+
+        class Handler:
+            def __init__(self, name: str):
+                self.name = name
+
+        class ServiceWithHandlers:
+            def __init__(self, handlers: set[Handler]):
+                self.handlers = handlers
+
+        module = ModuleDef()
+
+        # Create a binding
+        module.make(Handler).named("optional").using().value(Handler("optional"))
+
+        # Add ONLY weak reference to the set (no non-weak reference)
+        module.many(Handler).weak(DIKey.of(Handler, "optional"))
+
+        module.make(ServiceWithHandlers).using().type(ServiceWithHandlers)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithHandlers))
+
+        # Should have empty set (weak reference filtered out)
+        self.assertEqual(len(service.handlers), 0)
+
+    def test_weak_reference_without_non_weak_counterpart_with_empty_set(self):
+        """Test that .weak() results in empty set when combined with explicit empty set provision."""
+
+        class Handler:
+            def __init__(self, name: str):
+                self.name = name
+
+        class ServiceWithHandlers:
+            def __init__(self, handlers: set[Handler]):
+                self.handlers = handlers
+
+        module = ModuleDef()
+
+        # Create a binding
+        module.make(Handler).named("optional").using().value(Handler("optional"))
+
+        # Provide an empty set as default
+        empty_set: set[Handler] = set()
+        module.make(set[Handler]).using().value(empty_set)  # type: ignore[misc]
+
+        # Add ONLY weak reference to the set (no non-weak reference)
+        module.many(Handler).weak(DIKey.of(Handler, "optional"))
+
+        module.make(ServiceWithHandlers).using().type(ServiceWithHandlers)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithHandlers))
+
+        # Should have empty set (weak reference filtered out, empty set used)
+        self.assertEqual(len(service.handlers), 0)
+
+    def test_weak_reference_mixed_with_direct_elements(self):
+        """Test that .weak() works correctly when mixed with direct set elements."""
+
+        class Handler:
+            def __init__(self, name: str):
+                self.name = name
+
+        class ServiceWithHandlers:
+            def __init__(self, handlers: set[Handler]):
+                self.handlers = handlers
+
+        module = ModuleDef()
+
+        # Create bindings
+        module.make(Handler).named("included").using().value(Handler("included"))
+        module.make(Handler).named("excluded").using().value(Handler("excluded"))
+
+        # Mix direct additions with weak references
+        module.many(Handler).add_value(Handler("direct")).weak(DIKey.of(Handler, "included")).ref(
+            DIKey.of(Handler, "included")
+        ).weak(DIKey.of(Handler, "excluded"))
+
+        module.make(ServiceWithHandlers).using().type(ServiceWithHandlers)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithHandlers))
+
+        # Should have direct + included (has non-weak ref), but not excluded (only weak ref)
+        self.assertEqual(len(service.handlers), 2)
+        handler_names = {handler.name for handler in service.handlers}
+        self.assertEqual(handler_names, {"direct", "included"})
+
+    def test_multiple_weak_references_same_binding(self):
+        """Test multiple weak references to the same binding."""
+
+        class Handler:
+            def __init__(self, name: str):
+                self.name = name
+
+        class ServiceWithHandlers:
+            def __init__(self, handlers: set[Handler]):
+                self.handlers = handlers
+
+        module = ModuleDef()
+
+        # Create a binding
+        module.make(Handler).named("shared").using().value(Handler("shared"))
+
+        # Add multiple weak references (should be deduplicated and filtered out)
+        module.many(Handler).weak(DIKey.of(Handler, "shared")).weak(DIKey.of(Handler, "shared"))
+
+        module.make(ServiceWithHandlers).using().type(ServiceWithHandlers)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+
+        # Should result in empty set because only weak references exist (no non-weak references)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithHandlers))
+
+        # Should have empty set (only weak references, no non-weak)
+        self.assertEqual(len(service.handlers), 0)
+
+    def test_weak_reference_with_non_existent_binding(self):
+        """Test that weak references to non-existent bindings are silently ignored."""
+
+        class Handler:
+            def __init__(self, name: str):
+                self.name = name
+
+        class ServiceWithHandlers:
+            def __init__(self, handlers: set[Handler]):
+                self.handlers = handlers
+
+        module = ModuleDef()
+
+        # Add weak reference to non-existent binding
+        module.many(Handler).weak(DIKey.of(Handler, "nonexistent"))
+
+        module.make(ServiceWithHandlers).using().type(ServiceWithHandlers)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithHandlers))
+
+        # Weak reference to non-existent binding should be silently ignored
+        self.assertEqual(len(service.handlers), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

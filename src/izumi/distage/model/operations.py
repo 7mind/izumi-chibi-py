@@ -115,6 +115,7 @@ class Lookup(ExecutableOp):
     lookup_key: InstanceKey
     source_key: InstanceKey
     set_key: InstanceKey | None = None
+    is_weak: bool = False
 
     def key(self) -> InstanceKey:
         """Get the DIKey this operation produces."""

@@ -170,6 +170,22 @@ class SetBindingBuilder[T]:
 
         return self
 
+    def weak(self, source_key: InstanceKey) -> SetBindingBuilder[T]:
+        """Add a weak reference to an existing binding to the set.
+
+        Weak references only remain in the graph if there are non-weak references to the same binding.
+        """
+        from .model.operations import Lookup
+
+        set_key = InstanceKey(set[self._target_type], None)  # type: ignore[name-defined]
+        element_key = InstanceKey(self._target_type, self._generate_element_name())
+        lookup_operation = Lookup(element_key, source_key, set_key, is_weak=True)
+
+        # Add the lookup operation to the module
+        self._module.add_lookup_operation(lookup_operation)
+
+        return self
+
 
 class UsingBuilder[T]:
     """Builder for creating functoid-based bindings with a fluent API."""
