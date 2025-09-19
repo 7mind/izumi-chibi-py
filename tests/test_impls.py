@@ -659,5 +659,186 @@ class TestWeakReferenceFunctionality(unittest.TestCase):
         self.assertEqual(len(service.handlers), 0)
 
 
+class TestAliasedFunctionality(unittest.TestCase):
+    """Test the .aliased() functionality for creating binding aliases."""
+
+    def test_basic_aliasing(self):
+        """Test basic aliasing functionality."""
+
+        class Service:
+            def __init__(self, name: str):
+                self.name = name
+
+        module = ModuleDef()
+
+        # Create a named binding with an alias
+        module.make(Service).named("primary").aliased(DIKey.of(Service, "alias")).using().value(
+            Service("test-service")
+        )
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        # Get service through original key
+        service_original = locator.get(DIKey.of(Service, "primary"))
+
+        # Get service through alias key
+        service_alias = locator.get(DIKey.of(Service, "alias"))
+
+        # Verify they are the same instance
+        self.assertEqual(service_original.name, "test-service")
+        self.assertEqual(service_alias.name, "test-service")
+        self.assertIs(service_original, service_alias)
+
+    def test_named_to_unnamed_alias(self):
+        """Test aliasing a named binding to an unnamed binding."""
+
+        class Service:
+            def __init__(self, name: str):
+                self.name = name
+
+        class Client:
+            def __init__(self, service: Service):
+                self.service = service
+
+        module = ModuleDef()
+
+        # Create named binding aliased to unnamed
+        module.make(Service).named("primary").aliased(DIKey.of(Service)).using().value(
+            Service("primary-service")
+        )
+
+        # Client depends on unnamed Service
+        module.make(Client).using().type(Client)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        service_named = locator.get(DIKey.of(Service, "primary"))
+        service_unnamed = locator.get(DIKey.of(Service))
+        client = locator.get(DIKey.of(Client))
+
+        # Verify all point to same instance
+        self.assertIs(service_named, service_unnamed)
+        self.assertIs(client.service, service_unnamed)
+        self.assertEqual(service_named.name, "primary-service")
+
+    def test_unnamed_to_named_alias(self):
+        """Test aliasing an unnamed binding to a named binding."""
+
+        class Service:
+            def __init__(self, name: str):
+                self.name = name
+
+        module = ModuleDef()
+
+        # Create unnamed binding aliased to named
+        module.make(Service).aliased(DIKey.of(Service, "service-alias")).using().value(
+            Service("main-service")
+        )
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        service_unnamed = locator.get(DIKey.of(Service))
+        service_aliased = locator.get(DIKey.of(Service, "service-alias"))
+
+        # Verify they are the same instance
+        self.assertIs(service_unnamed, service_aliased)
+        self.assertEqual(service_unnamed.name, "main-service")
+
+    def test_multiple_aliases(self):
+        """Test that a binding can have multiple aliases."""
+
+        class Service:
+            def __init__(self, name: str):
+                self.name = name
+
+        module = ModuleDef()
+
+        # Create binding with multiple aliases
+        module.make(Service).named("original").aliased(DIKey.of(Service, "alias1")).using().value(
+            Service("multi-alias")
+        )
+
+        # Add another alias to the same original binding
+        # Note: We need to create this as a separate lookup operation since aliased() is called before using()
+        from izumi.distage.model.operations import Lookup
+
+        alias2_lookup = Lookup(
+            DIKey.of(Service, "alias2"), DIKey.of(Service, "original"), set_key=None, is_weak=False
+        )
+        module.add_lookup_operation(alias2_lookup)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        service_original = locator.get(DIKey.of(Service, "original"))
+        service_alias1 = locator.get(DIKey.of(Service, "alias1"))
+        service_alias2 = locator.get(DIKey.of(Service, "alias2"))
+
+        # Verify all are the same instance
+        self.assertIs(service_original, service_alias1)
+        self.assertIs(service_original, service_alias2)
+        self.assertEqual(service_original.name, "multi-alias")
+
+    def test_aliased_chaining_with_other_methods(self):
+        """Test that .aliased() works with method chaining."""
+
+        class Service:
+            def __init__(self, name: str):
+                self.name = name
+
+        module = ModuleDef()
+
+        # Test chaining with named()
+        module.make(Service).named("chained").aliased(
+            DIKey.of(Service, "chain-alias")
+        ).using().value(Service("chained-service"))
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        service_named = locator.get(DIKey.of(Service, "chained"))
+        service_aliased = locator.get(DIKey.of(Service, "chain-alias"))
+
+        self.assertIs(service_named, service_aliased)
+        self.assertEqual(service_named.name, "chained-service")
+
+    def test_aliased_with_different_types(self):
+        """Test aliasing with different implementation types."""
+
+        class Service:
+            def __init__(self, name: str):
+                self.name = name
+
+        class ServiceImpl(Service):
+            def __init__(self):
+                super().__init__("implementation")
+
+        module = ModuleDef()
+
+        # Create binding using .type() and alias it
+        module.make(Service).named("impl").aliased(DIKey.of(Service, "impl-alias")).using().type(
+            ServiceImpl
+        )
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        service_named = locator.get(DIKey.of(Service, "impl"))
+        service_aliased = locator.get(DIKey.of(Service, "impl-alias"))
+
+        self.assertIs(service_named, service_aliased)
+        self.assertIsInstance(service_named, ServiceImpl)
+        self.assertEqual(service_named.name, "implementation")
+
+
 if __name__ == "__main__":
     unittest.main()

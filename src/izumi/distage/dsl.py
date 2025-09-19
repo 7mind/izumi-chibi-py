@@ -78,10 +78,20 @@ class BindingBuilder[T]:
         self._tag = tag
         return self
 
-    def using(self) -> UsingBuilder[T]:
-        """Create a UsingBuilder for fluent binding configuration."""
+    def aliased(self, alias_key: InstanceKey) -> BindingBuilder[T]:
+        """Create an alias for this binding.
 
-        def finalize_binding(functoid: Functoid[T]) -> None:
+        The alias will resolve to the same instance as the original binding.
+
+        Args:
+            alias_key: The key that should alias this binding
+
+        Returns:
+            The same BindingBuilder for method chaining
+        """
+
+        def finalize_with_alias(functoid: Functoid[T]) -> None:
+            # Create the original binding
             key = InstanceKey(self._target_type, self._name)
 
             # Convert tag to activation_tags if it's an AxisChoiceDef
@@ -102,9 +112,52 @@ class BindingBuilder[T]:
                 except AttributeError:
                     is_factory = False
 
-            # Create binding with the functoid
+            # Create the original binding
             binding = Binding(key, functoid, activation_tags, is_factory)
             self._module.add_binding(binding)
+
+            # Create the alias lookup operation
+            from .model.operations import Lookup
+
+            alias_lookup = Lookup(alias_key, key, set_key=None, is_weak=False)
+            self._module.add_lookup_operation(alias_lookup)
+
+        # Store the modified finalize callback
+        self._finalize_callback = finalize_with_alias
+        return self
+
+    def using(self) -> UsingBuilder[T]:
+        """Create a UsingBuilder for fluent binding configuration."""
+
+        def finalize_binding(functoid: Functoid[T]) -> None:
+            if hasattr(self, "_finalize_callback"):
+                # Use the modified callback if aliased() was called
+                self._finalize_callback(functoid)
+            else:
+                # Original finalize logic
+                key = InstanceKey(self._target_type, self._name)
+
+                # Convert tag to activation_tags if it's an AxisChoiceDef
+                activation_tags: set[Any] = set()
+                if self._tag is not None:
+                    from .activation import AxisChoiceDef
+
+                    if isinstance(self._tag, AxisChoiceDef):
+                        activation_tags.add(self._tag)
+
+                # Check if this is a Factory[T] binding
+                is_factory = False
+                if hasattr(self._target_type, "__origin__"):
+                    from .factory import Factory
+
+                    try:
+                        is_factory = self._target_type.__origin__ is Factory  # type: ignore[union-attr]
+                    except AttributeError:
+                        is_factory = False
+
+                # Create binding with the functoid
+                binding = Binding(key, functoid, activation_tags, is_factory)
+                self._module.add_binding(binding)
 
         return UsingBuilder(self._target_type, finalize_binding)
 
