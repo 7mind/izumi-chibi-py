@@ -109,6 +109,27 @@ class CreateFactory(ExecutableOp):
 
 
 @dataclass
+class Lookup(ExecutableOp):
+    """Operation that looks up an existing binding and exposes it with a new key."""
+
+    lookup_key: InstanceKey
+    source_key: InstanceKey
+    set_key: InstanceKey | None = None
+
+    def key(self) -> InstanceKey:
+        """Get the DIKey this operation produces."""
+        return self.lookup_key
+
+    def dependencies(self) -> list[InstanceKey]:
+        """Get the dependencies this operation requires."""
+        return [self.source_key]
+
+    def execute(self, resolved_deps: dict[InstanceKey, Any]) -> Any:
+        """Execute by passing through the resolved dependency."""
+        return resolved_deps[self.source_key]
+
+
+@dataclass
 class CreateSet(ExecutableOp):
     """Operation that creates a set by collecting all set element bindings."""
 

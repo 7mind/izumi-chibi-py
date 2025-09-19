@@ -11,7 +11,7 @@ from typing import Any
 from ..activation import Activation
 from .bindings import Binding
 from .keys import InstanceKey, SetElementKey
-from .operations import CreateFactory, CreateSet, ExecutableOp, Provide
+from .operations import CreateFactory, CreateSet, ExecutableOp, Lookup, Provide
 
 
 class CircularDependencyError(Exception):
@@ -58,6 +58,7 @@ class DependencyGraph:
         self._operations: dict[InstanceKey, ExecutableOp] = {}
         self._nodes: dict[InstanceKey, GraphNode] = {}
         self._set_bindings: dict[InstanceKey, list[Binding]] = defaultdict(list)
+        self._set_lookup_operations: dict[InstanceKey, list[Lookup]] = defaultdict(list)
         self._validated = False
 
     def add_binding(self, binding: Binding) -> None:
@@ -73,6 +74,17 @@ class DependencyGraph:
             # If this is the first binding or an untagged binding, also store in main bindings
             if binding.key not in self._bindings or not binding.activation_tags:
                 self._bindings[binding.key] = binding
+
+        self._validated = False
+
+    def add_lookup_operation(self, lookup_op: Lookup) -> None:
+        """Add a lookup operation directly to the graph."""
+        # Directly add the lookup operation to the operations
+        self._operations[lookup_op.key()] = lookup_op
+
+        # If this lookup operation is for a set element, track it
+        if lookup_op.set_key is not None:
+            self._set_lookup_operations[lookup_op.set_key].append(lookup_op)
 
         self._validated = False
 
@@ -109,7 +121,12 @@ class DependencyGraph:
 
     def generate_operations(self) -> None:
         """Generate operations from bindings."""
+        # Preserve any lookup operations that were added directly
+        existing_lookup_operations = {
+            key: op for key, op in self._operations.items() if isinstance(op, Lookup)
+        }
         self._operations.clear()
+        self._operations.update(existing_lookup_operations)
 
         # Create operations for regular bindings
         for key, binding in self._bindings.items():
@@ -130,14 +147,24 @@ class DependencyGraph:
                 self._operations[key] = Provide(binding)
 
         # Create CreateSet operations for set bindings
-        for set_key, bindings in self._set_bindings.items():
+        all_set_keys = set(self._set_bindings.keys()) | set(self._set_lookup_operations.keys())
+        for set_key in all_set_keys:
             element_keys: list[InstanceKey] = []
+
+            # Add elements from bindings
+            bindings = self._set_bindings.get(set_key, [])
             for binding in bindings:
                 # Create Provide operation for each set element
                 if isinstance(binding.key, SetElementKey):
                     element_key = binding.key.element_key
                     self._operations[element_key] = Provide(binding)
                     element_keys.append(element_key)
+
+            # Add elements from lookup operations
+            lookup_ops = self._set_lookup_operations.get(set_key, [])
+            for lookup_op in lookup_ops:
+                # Lookup operations are already added to _operations in add_lookup_operation
+                element_keys.append(lookup_op.key())
 
             # Create CreateSet operation to collect all elements
             if element_keys:

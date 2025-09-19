@@ -123,6 +123,12 @@ class Injector:
             for binding in module.bindings:
                 graph.add_binding(binding)
 
+        # Add all lookup operations to the graph
+        for module in input.modules:
+            if hasattr(module, "lookup_operations"):
+                for lookup_op in module.lookup_operations:
+                    graph.add_lookup_operation(lookup_op)
+
         # Filter bindings based on activation
         if not input.activation.choices:
             # No activation specified, keep all bindings

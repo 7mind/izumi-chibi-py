@@ -408,5 +408,71 @@ class TestSetElementKeyIntegration(unittest.TestCase):
         self.assertEqual(service_names, {"Service-test"})
 
 
+class TestSetRefFunctionality(unittest.TestCase):
+    """Test the .ref() functionality for sets."""
+
+    def test_set_ref_basic(self):
+        """Test that .ref() can add references to existing bindings to a set."""
+
+        class Handler:
+            def __init__(self, name: str):
+                self.name = name
+
+            def handle(self) -> str:
+                return f"handled by {self.name}"
+
+        class ServiceWithHandlers:
+            def __init__(self, handlers: set[Handler]):
+                self.handlers = handlers
+
+        module = ModuleDef()
+
+        # Create individual bindings
+        module.make(Handler).named("primary").using().value(Handler("primary"))
+        module.make(Handler).named("secondary").using().value(Handler("secondary"))
+
+        # Use .ref() to add references to the set
+        module.many(Handler).ref(DIKey.of(Handler, "primary")).ref(DIKey.of(Handler, "secondary"))
+
+        module.make(ServiceWithHandlers).using().type(ServiceWithHandlers)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithHandlers))
+
+        self.assertEqual(len(service.handlers), 2)
+        handler_names = {handler.name for handler in service.handlers}
+        self.assertEqual(handler_names, {"primary", "secondary"})
+
+    def test_set_ref_mixed_with_direct_elements(self):
+        """Test that .ref() works together with .add_value() and other methods."""
+
+        class Handler:
+            def __init__(self, name: str):
+                self.name = name
+
+        class ServiceWithHandlers:
+            def __init__(self, handlers: set[Handler]):
+                self.handlers = handlers
+
+        module = ModuleDef()
+
+        # Create individual binding
+        module.make(Handler).named("shared").using().value(Handler("shared"))
+
+        # Mix .ref() with direct addition
+        module.many(Handler).add_value(Handler("direct")).ref(DIKey.of(Handler, "shared"))
+
+        module.make(ServiceWithHandlers).using().type(ServiceWithHandlers)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithHandlers))
+
+        self.assertEqual(len(service.handlers), 2)
+        handler_names = {handler.name for handler in service.handlers}
+        self.assertEqual(handler_names, {"direct", "shared"})
+
+
 if __name__ == "__main__":
     unittest.main()
