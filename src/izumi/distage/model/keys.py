@@ -4,6 +4,7 @@ DIKey implementation for dependency injection.
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TypeVar
 
@@ -27,7 +28,20 @@ class Id:
 
 
 @dataclass(frozen=True)
-class DIKey:
+class AbstractDIKey(ABC):
+    """Abstract base class for dependency injection keys."""
+
+    @abstractmethod
+    def __str__(self) -> str:
+        """Return string representation of the key."""
+
+    @abstractmethod
+    def __hash__(self) -> int:
+        """Return hash of the key."""
+
+
+@dataclass(frozen=True)
+class DIKey(AbstractDIKey):
     """A key that identifies a specific dependency in the object graph."""
 
     target_type: type
@@ -48,7 +62,7 @@ class DIKey:
 
 
 @dataclass(frozen=True)
-class SetElementKey:
+class SetElementKey(AbstractDIKey):
     """A key that identifies a specific element within a set binding."""
 
     set_key: DIKey

@@ -138,27 +138,10 @@ class LocatorImpl(Locator):
 
         return False
 
-    def is_resolved(self, target_type: type[T], name: str | None = None) -> bool:
-        """
-        Check if an instance is already resolved for the given type.
-
-        Args:
-            target_type: The type to check
-            name: Optional name qualifier
-
-        Returns:
-            True if an instance is already created, False otherwise
-        """
-        key = DIKey(target_type, name)
-        return key in self._instances
 
     def get_instance_count(self) -> int:
         """Get the number of instances currently stored in this locator."""
         return len(self._instances)
-
-    def clear_instances(self) -> None:
-        """Clear all cached instances in this locator."""
-        self._instances.clear()
 
     def run(self, func: Callable[..., T]) -> T:
         """

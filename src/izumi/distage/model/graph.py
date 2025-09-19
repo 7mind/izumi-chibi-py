@@ -6,11 +6,13 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import dataclass
+from typing import Any
 
 from ..activation import Activation
 from .bindings import Binding
 from .keys import DIKey, SetElementKey
 from .operations import CreateFactory, CreateSet, ExecutableOp, Provide
+
 
 class CircularDependencyError(Exception):
     """Raised when circular dependencies are detected."""
@@ -114,7 +116,7 @@ class DependencyGraph:
             if binding.is_factory:
                 # Create CreateFactory operation for factory bindings
                 # Extract the target type from Factory[T]
-                if isinstance(key, DIKey):
+                if isinstance(key, DIKey):  # Factory bindings only work with DIKey, not SetElementKey
                     if (
                         hasattr(key.target_type, "__args__")
                         and key.target_type.__args__  # pyright: ignore[reportUnknownMemberType]
@@ -154,7 +156,7 @@ class DependencyGraph:
         self._check_circular_dependencies()
         self._validated = True
 
-    def validate_with_parent_locator(self, parent_locator: Locator) -> None:
+    def validate_with_parent_locator(self, parent_locator: Any) -> None:
         """Validate the dependency graph with a parent locator for missing dependencies."""
         if self._validated:
             return
@@ -200,7 +202,7 @@ class DependencyGraph:
                         continue
                     raise MissingBindingError(dep_key, node.key)
 
-    def _check_missing_dependencies_with_parent(self, parent_locator: Locator) -> None:
+    def _check_missing_dependencies_with_parent(self, parent_locator: Any) -> None:
         """Check for missing dependencies, allowing parent locator to provide them."""
         for node in self._nodes.values():
             # Skip dependency validation for factory operations

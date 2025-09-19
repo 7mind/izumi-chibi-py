@@ -4,12 +4,10 @@ Injector - Stateless dependency injection container that produces Plans from Pla
 
 from __future__ import annotations
 
-import inspect
 import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from .functoid import Functoid
 from .locator_base import Locator
 from .logger_injection import AutoLoggerManager
 from .model import DependencyGraph, DIKey, ExecutableOp, Plan

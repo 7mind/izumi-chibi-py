@@ -20,7 +20,7 @@ from .factory import Factory
 from .functoid import Functoid
 from .injector import Injector
 from .locator_base import Locator
-from .model import Binding, DependencyGraph, DIKey, Plan, Id
+from .model import Binding, DependencyGraph, DIKey, Id, Plan
 from .planner_input import PlannerInput
 from .roots import Roots
 from .tag import Tag

@@ -126,14 +126,14 @@ class TestLocator(unittest.TestCase):
         self.assertTrue(locator.has(ExistingService))
         self.assertFalse(locator.has(MissingService))
 
-        self.assertTrue(locator.is_resolved(ExistingService))
+        self.assertTrue(locator.has(ExistingService))
 
         # Resolve the service
         service = locator.get(ExistingService)
         self.assertIsInstance(service, ExistingService)
 
-        # Test is_resolved() after resolution
-        self.assertTrue(locator.is_resolved(ExistingService))
+        # Test has() after resolution
+        self.assertTrue(locator.has(ExistingService))
 
         # Test find() method
         found_service = locator.find(ExistingService)

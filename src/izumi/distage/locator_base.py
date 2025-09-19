@@ -75,18 +75,6 @@ class Locator(ABC):
             True if the type can be resolved, False otherwise
         """
 
-    @abstractmethod
-    def is_resolved(self, target_type: type[T], name: str | None = None) -> bool:
-        """
-        Check if an instance is already resolved for the given type.
-
-        Args:
-            target_type: The type to check
-            name: Optional name qualifier
-
-        Returns:
-            True if an instance is already created, False otherwise
-        """
 
     @abstractmethod
     def get_instance_count(self) -> int:
@@ -162,11 +150,11 @@ class LocatorEmpty(Locator):
             cls._instance = cls()
         return cls._instance
 
-    def has_key_locally(self, key: DIKey) -> bool:
+    def has_key_locally(self, key: DIKey) -> bool:  # noqa: ARG002
         """Empty locator has no keys locally."""
         return False
 
-    def has_key(self, key: DIKey) -> bool:
+    def has_key(self, key: DIKey) -> bool:  # noqa: ARG002
         """Empty locator has no keys."""
         return False
 
@@ -179,23 +167,20 @@ class LocatorEmpty(Locator):
         key = DIKey(target_type, name)
         raise ValueError(f"Empty locator cannot provide {key}")
 
-    def find(self, target_type: type[T], name: str | None = None) -> T | None:
+    def find(self, target_type: type[T], name: str | None = None) -> T | None:  # noqa: ARG002
         """Empty locator cannot find any instances."""
         return None
 
-    def has(self, target_type: type[T], name: str | None = None) -> bool:
+    def has(self, target_type: type[T], name: str | None = None) -> bool:  # noqa: ARG002
         """Empty locator has no types."""
         return False
 
-    def is_resolved(self, target_type: type[T], name: str | None = None) -> bool:
-        """Empty locator has no resolved instances."""
-        return False
 
     def get_instance_count(self) -> int:
         """Empty locator has no instances."""
         return 0
 
-    def run(self, func: Callable[..., T]) -> T:
+    def run(self, func: Callable[..., T]) -> T:  # noqa: ARG002
         """Empty locator cannot inject dependencies."""
         raise ValueError("Empty locator cannot execute functions with dependency injection")
 

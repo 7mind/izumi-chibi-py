@@ -30,7 +30,7 @@ class ExecutableOp(ABC):
         """Get the dependencies this operation requires."""
 
     @abstractmethod
-    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:
+    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:  # noqa: ARG002
         """Execute the operation with resolved dependencies."""
 
 
@@ -50,7 +50,7 @@ class Provide(ExecutableOp):
         """Get the dependencies this operation requires."""
         return self.binding.functoid.keys()
 
-    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:
+    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:  # noqa: ARG002
         """Execute the binding with resolved dependencies."""
         dependencies = self.binding.functoid.sig()
         resolved_args: list[Any] = []
@@ -91,7 +91,7 @@ class CreateFactory(ExecutableOp):
         # Dependencies for assisted injection are handled at factory.create() time
         return []  # Factory operations should not require any upfront dependencies
 
-    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:
+    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:  # noqa: ARG002
         """Execute by creating a Factory instance."""
         from ..factory import Factory
 
@@ -124,7 +124,7 @@ class CreateSet(ExecutableOp):
         """Get the dependencies this operation requires."""
         return self.element_keys
 
-    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:
+    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:  # noqa: ARG002
         """Execute by collecting all resolved set elements."""
         elements = set()
         for element_key in self.element_keys:

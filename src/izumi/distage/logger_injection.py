@@ -12,9 +12,8 @@ import logging
 from types import FrameType
 from typing import Any
 
-from .model import Binding
 from .functoid import function_functoid
-from .model import DIKey
+from .model import Binding, DIKey
 
 
 class LoggerLocationIntrospector:

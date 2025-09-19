@@ -7,8 +7,8 @@ import unittest
 from dataclasses import dataclass
 
 from izumi.distage import Injector, ModuleDef, PlannerInput
-from izumi.distage.model.graph import CircularDependencyError, MissingBindingError
 from izumi.distage.introspection import SignatureIntrospector
+from izumi.distage.model.graph import CircularDependencyError, MissingBindingError
 
 
 class TestBasicBinding(unittest.TestCase):

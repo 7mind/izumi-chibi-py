@@ -8,7 +8,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
-from .model import Binding
 from .functoid import (
     Functoid,
     class_functoid,
@@ -16,7 +15,7 @@ from .functoid import (
     set_element_functoid,
     value_functoid,
 )
-from .model import DIKey, SetElementKey
+from .model import Binding, DIKey, SetElementKey
 from .tag import Tag
 
 T = TypeVar("T")

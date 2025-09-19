@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from typing import TypeVar
 
 from ..activation import Activation
+from ..roots import Roots
 from .graph import DependencyGraph
 from .keys import DIKey
-from ..roots import Roots
 
 T = TypeVar("T")
 
@@ -48,8 +48,8 @@ class Plan:
         Returns:
             An empty Plan instance
         """
-        from .graph import DependencyGraph
         from .activation import Activation
+        from .graph import DependencyGraph
         from .roots import Roots
 
         # Create an empty graph with no operations
