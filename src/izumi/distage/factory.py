@@ -27,23 +27,23 @@ class Factory[T]:
         instance = factory.create(missing_param="value")
     """
 
-    def __init__(self, target_type: type[T], locator: Any, functoid: Any = None) -> None:
+    def __init__(self, target_type: type[T], locator: Any, functoid: Any) -> None:
         """
         Initialize the factory.
 
         Args:
             target_type: The type of objects this factory creates
             locator: The locator for resolving dependencies
-            functoid: Optional functoid to use for creating instances
+            functoid: The functoid to use for creating instances
         """
         self._target_type = target_type
         self._locator = locator
         self._functoid = functoid
-        # Always extract dependencies from the target type for proper parameter mapping
+        # Extract dependencies from the functoid's original source for proper parameter mapping
         # The functoid is used for creation, but we need the original signature for assisted injection
-        if functoid and hasattr(functoid, "original_class") and functoid.original_class:
+        if hasattr(functoid, "original_class") and functoid.original_class:
             self._dependencies = SignatureIntrospector.extract_dependencies(functoid.original_class)
-        elif functoid and hasattr(functoid, "original_func") and functoid.original_func:
+        elif hasattr(functoid, "original_func") and functoid.original_func:
             self._dependencies = SignatureIntrospector.extract_dependencies(functoid.original_func)
         else:
             self._dependencies = SignatureIntrospector.extract_dependencies(target_type)
@@ -126,47 +126,14 @@ class Factory[T]:
                 f"{', '.join(unexpected_kwargs)}"
             )
 
-        # Create and return the instance
-        if self._functoid:
-            # Use functoid to create the instance
-            # Convert resolved_kwargs back to positional args based on dependencies order
-            args_for_functoid = []
-            for dep in self._dependencies:
-                if dep.name in resolved_kwargs:
-                    args_for_functoid.append(resolved_kwargs[dep.name])  # pyright: ignore[reportUnknownMemberType]
-            result = self._functoid.call(*args_for_functoid)
-            return result  # type: ignore[no-any-return]
-        else:
-            # Fallback to direct instantiation
-            return self._target_type(**resolved_kwargs)
+        # Create and return the instance using the functoid
+        # Convert resolved_kwargs back to positional args based on dependencies order
+        args_for_functoid = []
+        for dep in self._dependencies:
+            if dep.name in resolved_kwargs:
+                args_for_functoid.append(resolved_kwargs[dep.name])  # pyright: ignore[reportUnknownMemberType]
+        result = self._functoid.call(*args_for_functoid)
+        return result  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:
         return f"Factory[{self._target_type.__name__}]"
-
-
-class FactoryImpl[T]:
-    """Implementation for Factory[T] bindings in the DI system."""
-
-    def __init__(self, target_type: type[T]) -> None:
-        """
-        Initialize the factory implementation.
-
-        Args:
-            target_type: The type that the factory should create
-        """
-        self.target_type = target_type
-
-    def create_factory(self, locator: Any) -> Factory[T]:
-        """
-        Create a factory instance with the given locator.
-
-        Args:
-            locator: The locator for dependency resolution
-
-        Returns:
-            A Factory[T] instance
-        """
-        return Factory(self.target_type, locator)
-
-    def __repr__(self) -> str:
-        return f"FactoryImpl[{self.target_type.__name__}]"

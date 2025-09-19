@@ -401,6 +401,7 @@ class TestFactoryRepr(unittest.TestCase):
     def test_factory_repr(self):
         """Test Factory[T] __repr__ method."""
         from izumi.distage.factory import Factory
+        from izumi.distage.functoid import class_functoid
 
         class MockLocator:
             def get(self, target_type: type, name: str | None = None) -> None:
@@ -409,7 +410,8 @@ class TestFactoryRepr(unittest.TestCase):
         class TestService:
             pass
 
-        factory = Factory(TestService, MockLocator())
+        functoid = class_functoid(TestService)
+        factory = Factory(TestService, MockLocator(), functoid)
         self.assertEqual(repr(factory), "Factory[TestService]")
 
 
