@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .activation import Activation
-from .core import ModuleDef
+from .dsl import ModuleDef
 from .roots import Roots
 
 

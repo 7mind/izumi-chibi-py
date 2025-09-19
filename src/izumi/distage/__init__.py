@@ -16,7 +16,7 @@ from beartype.roar import BeartypeCallHintViolation
 
 from .activation import Activation, AxisChoiceDef, StandardAxis
 from .bindings import Binding
-from .core import ModuleDef
+from .dsl import ModuleDef
 from .factory import Factory
 from .functoid import Functoid
 from .graph import DependencyGraph
