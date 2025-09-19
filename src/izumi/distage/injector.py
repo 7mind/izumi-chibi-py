@@ -10,7 +10,7 @@ from typing import Any, TypeVar
 
 from .locator_base import Locator
 from .logger_injection import AutoLoggerManager
-from .model import DependencyGraph, InstanceKey, ExecutableOp, Plan
+from .model import DependencyGraph, ExecutableOp, InstanceKey, Plan
 from .planner_input import PlannerInput
 
 T = TypeVar("T")
@@ -38,6 +38,7 @@ class Injector:
         """
         # Use empty locator instead of None for cleaner null object pattern
         from .locator_base import Locator
+
         self._parent_locator = parent_locator if parent_locator is not None else Locator.empty()
 
     def plan(self, input: PlannerInput) -> Plan:
@@ -98,7 +99,7 @@ class Injector:
             if plan.has_operation(key):
                 return instances[key]
             else:
-                return self._parent_locator.get(key.target_type, key.name)
+                return self._parent_locator.get(key.target_type, key.name)  # pyright: ignore[reportUnknownVariableType]
 
         # Resolve all dependencies in topological order
         for binding_key in plan.get_execution_order():
@@ -108,6 +109,7 @@ class Injector:
                 instances[binding_key] = instance
 
         from .locator_impl import LocatorImpl
+
         return LocatorImpl(plan, instances, self._parent_locator)
 
     def _build_graph(self, input: PlannerInput) -> DependencyGraph:
@@ -172,7 +174,9 @@ class Injector:
 
         return self._execute_operation(operation, resolve_fn)
 
-    def _execute_operation(self, operation: ExecutableOp, resolve_fn: Callable[[InstanceKey], Any]) -> Any:
+    def _execute_operation(
+        self, operation: ExecutableOp, resolve_fn: Callable[[InstanceKey], Any]
+    ) -> Any:
         """Execute an operation with resolved dependencies."""
         from .model import CreateFactory
 

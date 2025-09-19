@@ -116,24 +116,22 @@ class DependencyGraph:
             if binding.is_factory:
                 # Create CreateFactory operation for factory bindings
                 # Extract the target type from Factory[T]
-                if isinstance(key, InstanceKey):  # Factory bindings only work with DIKey, not SetElementKey
-                    if (
-                        hasattr(key.target_type, "__args__")
-                        and key.target_type.__args__  # pyright: ignore[reportUnknownMemberType]
-                    ):  # pyright: ignore[reportUnknownMemberType]
-                        target_type = key.target_type.__args__[0]  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                        self._operations[key] = CreateFactory(key, target_type, binding)  # pyright: ignore[reportUnknownArgumentType]
-                    else:
-                        raise ValueError(f"Invalid Factory binding: {key}")
+                # Factory bindings only work with InstanceKey, not SetElementKey
+                # Since _bindings is typed as dict[InstanceKey, Binding], key is always InstanceKey
+                if (
+                    hasattr(key.target_type, "__args__") and key.target_type.__args__  # pyright: ignore[reportUnknownMemberType]
+                ):  # pyright: ignore[reportUnknownMemberType]
+                    target_type = key.target_type.__args__[0]  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                    self._operations[key] = CreateFactory(key, target_type, binding)  # pyright: ignore[reportUnknownArgumentType]
                 else:
-                    raise ValueError(f"Factory bindings must use DIKey, not SetElementKey: {key}")
+                    raise ValueError(f"Invalid Factory binding: {key}")
             else:
                 # Create Provide operation for regular bindings
                 self._operations[key] = Provide(binding)
 
         # Create CreateSet operations for set bindings
         for set_key, bindings in self._set_bindings.items():
-            element_keys = []
+            element_keys: list[InstanceKey] = []
             for binding in bindings:
                 # Create Provide operation for each set element
                 if isinstance(binding.key, SetElementKey):

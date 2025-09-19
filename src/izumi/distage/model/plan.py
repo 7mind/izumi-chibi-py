@@ -48,20 +48,17 @@ class Plan:
         Returns:
             An empty Plan instance
         """
-        from .activation import Activation
+        from ..activation import Activation
+        from ..roots import Roots
         from .graph import DependencyGraph
-        from .roots import Roots
 
         # Create an empty graph with no operations
         empty_graph = DependencyGraph()
         empty_graph.generate_operations()  # Creates empty operations dict
-        empty_graph._validated = True  # Mark as validated since it's empty
+        empty_graph.validate()  # Mark as validated since it's empty
 
         return Plan(
-            graph=empty_graph,
-            roots=Roots.empty(),
-            activation=Activation.empty(),
-            topology=[]
+            graph=empty_graph, roots=Roots.empty(), activation=Activation.empty(), topology=[]
         )
 
     def is_empty(self) -> bool:

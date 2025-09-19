@@ -5,7 +5,15 @@ Unit tests for Chibi Izumi advanced features: Roots and Activations.
 
 import unittest
 
-from izumi.distage import Activation, InstanceKey, Injector, ModuleDef, PlannerInput, Roots, StandardAxis
+from izumi.distage import (
+    Activation,
+    Injector,
+    InstanceKey,
+    ModuleDef,
+    PlannerInput,
+    Roots,
+    StandardAxis,
+)
 from izumi.distage.activation import Axis, AxisChoiceDef
 
 

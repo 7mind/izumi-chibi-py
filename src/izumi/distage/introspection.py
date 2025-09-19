@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import fields, is_dataclass
 from typing import Annotated, Any, get_args, get_origin, get_type_hints
 
-from .model import InstanceKey, Id
+from .model import Id, InstanceKey
 
 
 class DependencyInfo:

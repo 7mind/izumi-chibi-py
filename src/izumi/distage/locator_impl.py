@@ -74,7 +74,7 @@ class LocatorImpl(Locator):
         if key not in self._instances:
             # Try to resolve it on-demand
             if self._parent.has_key(key):
-                return self._parent.get(target_type, name)
+                return self._parent.get(target_type, name)  # type: ignore[no-any-return]
             elif AutoLoggerManager.should_auto_inject_logger(key):
                 # Create a generic logger using stack introspection
                 import logging
@@ -129,6 +129,7 @@ class LocatorImpl(Locator):
 
         # Check if it's an auto-injectable logger
         from .logger_injection import AutoLoggerManager
+
         if AutoLoggerManager.should_auto_inject_logger(key):
             return True
 
@@ -137,7 +138,6 @@ class LocatorImpl(Locator):
             return self._parent.has(target_type, name)
 
         return False
-
 
     def get_instance_count(self) -> int:
         """Get the number of instances currently stored in this locator."""
@@ -169,13 +169,18 @@ class LocatorImpl(Locator):
         dependencies = SignatureIntrospector.extract_from_callable(func)
 
         # Resolve each dependency
-        resolved_args = []
+        resolved_args: list[Any] = []
         for dep in dependencies:
+            # Skip parameters without proper type hints
+            if dep.type_hint == type(None) or dep.type_hint == inspect.Parameter.empty:  # noqa: E721
+                continue
+
+            # Skip if type_hint is not a type
+            if not isinstance(dep.type_hint, type):
+                continue
+
             if dep.is_optional and not self.has(dep.type_hint, dep.dependency_name):
                 continue  # Skip optional dependencies that can't be resolved
-
-            if dep.type_hint == type(None) or dep.type_hint == inspect.Parameter.empty:  # noqa: E721
-                continue  # Skip parameters without type hints
 
             resolved_args.append(self.get(dep.type_hint, dep.dependency_name))
 

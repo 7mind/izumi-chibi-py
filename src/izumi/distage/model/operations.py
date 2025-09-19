@@ -106,7 +106,7 @@ class CreateFactory(ExecutableOp):
 
         # Use the resolve function provided during execution
         locator = ResolverLocator(self.resolve_fn) if self.resolve_fn else None
-        return Factory(self.target_type, locator, self.binding.functoid)
+        return Factory(self.target_type, locator, self.binding.functoid)  # pyright: ignore[reportUnknownVariableType]
 
 
 @dataclass
@@ -126,7 +126,7 @@ class CreateSet(ExecutableOp):
 
     def execute(self, resolved_deps: dict[InstanceKey, Any]) -> Any:  # noqa: ARG002
         """Execute by collecting all resolved set elements."""
-        elements = set()
+        elements: set[Any] = set()
         for element_key in self.element_keys:
             if element_key in resolved_deps:
                 elements.add(resolved_deps[element_key])

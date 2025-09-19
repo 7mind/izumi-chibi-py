@@ -448,17 +448,6 @@ report_service = report_locator.get(ReportService)  # ReportService + Database +
 print(user_service.create_user("alice"))
 print(report_service.generate_report())
 
-# 5. Alternative: use create_child method for custom planning
-custom_module = ModuleDef()
-custom_module.make(ReportService).using().type(ReportService)
-
-custom_injector = Injector.inherit(parent_locator)
-custom_input = PlannerInput([custom_module])
-custom_plan = custom_injector.plan(custom_input)
-
-# Create child locator directly from parent
-custom_locator = parent_locator.create_child(custom_plan)
-custom_report_service = custom_locator.get(ReportService)
 ```
 
 Key benefits of locator inheritance:

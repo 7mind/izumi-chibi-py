@@ -75,7 +75,6 @@ class Locator(ABC):
             True if the type can be resolved, False otherwise
         """
 
-
     @abstractmethod
     def get_instance_count(self) -> int:
         """Get the number of instances currently stored in this locator."""
@@ -161,7 +160,6 @@ class LocatorEmpty(Locator):
     def has(self, target_type: type[T], name: str | None = None) -> bool:  # noqa: ARG002
         """Empty locator has no types."""
         return False
-
 
     def get_instance_count(self) -> int:
         """Empty locator has no instances."""
