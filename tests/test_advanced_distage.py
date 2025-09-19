@@ -15,6 +15,7 @@ from izumi.distage import (
     StandardAxis,
 )
 from izumi.distage.activation import Axis, AxisChoiceDef
+from izumi.distage.model import DIKey
 
 
 class TestRoots(unittest.TestCase):
@@ -46,8 +47,8 @@ class TestRoots(unittest.TestCase):
         combined = roots1 + roots2
 
         self.assertEqual(len(combined.keys), 2)
-        self.assertIn(InstanceKey.get(str), combined.keys)
-        self.assertIn(InstanceKey.get(int), combined.keys)
+        self.assertIn(DIKey.of(str), combined.keys)
+        self.assertIn(DIKey.of(int), combined.keys)
 
     def test_everything_roots_dominates(self):
         """Test that everything roots dominates in combination."""

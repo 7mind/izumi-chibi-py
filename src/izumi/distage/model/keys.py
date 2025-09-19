@@ -39,6 +39,9 @@ class DIKey(ABC):
     def __hash__(self) -> int:
         """Return hash of the key."""
 
+    @classmethod
+    def of(cls, target_type: type[T], name: str | None = None) -> InstanceKey:
+        return InstanceKey.of(target_type, name)
 
 @dataclass(frozen=True)
 class InstanceKey(DIKey):
@@ -48,7 +51,7 @@ class InstanceKey(DIKey):
     name: str | None = None
 
     @classmethod
-    def get(cls, target_type: type[T], name: str | None = None) -> InstanceKey:
+    def of(cls, target_type: type[T], name: str | None = None) -> InstanceKey:
         """Create a DIKey for the given type and optional name."""
         return cls(target_type, name)
 

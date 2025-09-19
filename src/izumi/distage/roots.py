@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from .model import DependencyGraph, InstanceKey
+from .model import DependencyGraph, InstanceKey, DIKey
 
 T = TypeVar("T")
 
@@ -26,7 +26,7 @@ class Roots:
     @classmethod
     def target(cls, *target_types: type) -> Roots:
         """Create roots targeting specific types."""
-        keys = [InstanceKey.get(target_type) for target_type in target_types]
+        keys = [DIKey.of(target_type) for target_type in target_types]
         return cls(keys)
 
     @classmethod
