@@ -20,7 +20,7 @@ class Factory[T]:
     from the DI system while allowing missing dependencies to be provided as arguments.
 
     Usage:
-        factory = injector.get(planner_input, Factory[SomeClass])
+        factory = injector.produce(injector.plan(planner_input)).get(Factory[SomeClass])
         instance = factory.create(missing_param="value")
     """
 

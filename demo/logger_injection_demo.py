@@ -111,7 +111,7 @@ def main():
     print("-" * 40)
 
     # Get the database service - it should have a logger named after its location
-    db_service = injector.get(planner_input, DatabaseService)
+    db_service = injector.produce(injector.plan(planner_input)).get(DatabaseService)
     print(f"DatabaseService logger name: {db_service.logger.name}")
     result = db_service.connect()
     print(f"Result: {result}")
@@ -120,7 +120,7 @@ def main():
     print("-" * 40)
 
     # Get the user service - both it and its DatabaseService dependency should have loggers
-    user_service = injector.get(planner_input, UserService)
+    user_service = injector.produce(injector.plan(planner_input)).get(UserService)
     print(f"UserService logger name: {user_service.logger.name}")
     print(f"UserService.database logger name: {user_service.database.logger.name}")
     result = user_service.create_user("alice")
@@ -130,8 +130,8 @@ def main():
     print("-" * 40)
 
     # Get different services - they should have different logger names
-    email_service = injector.get(planner_input, EmailService)
-    notification_service = injector.get(planner_input, NotificationService)
+    email_service = injector.produce(injector.plan(planner_input)).get(EmailService)
+    notification_service = injector.produce(injector.plan(planner_input)).get(NotificationService)
 
     print(f"EmailService logger name: {email_service.logger.name}")
     print(f"NotificationService logger name: {notification_service.logger.name}")
@@ -143,20 +143,20 @@ def main():
     print("-" * 40)
 
     # Get the audit message - the factory function should also get a logger
-    audit_message = injector.get(planner_input, str, "audit")
+    audit_message = injector.produce(injector.plan(planner_input)).get(str, "audit")
     print(f"Audit result: {audit_message}")
 
     print("\n5. Manual logger vs automatic logger:")
     print("-" * 40)
 
     # Compare manual and automatic logger
-    manual_service = injector.get(planner_input, ManualLoggerService)
+    manual_service = injector.produce(injector.plan(planner_input)).get(ManualLoggerService)
     print(f"Manual logger name: {manual_service.logger.name}")
     manual_result = manual_service.do_something()
     print(f"Manual result: {manual_result}")
 
     # Get another database service to show automatic logger
-    auto_db = injector.get(planner_input, DatabaseService)
+    auto_db = injector.produce(injector.plan(planner_input)).get(DatabaseService)
     print(f"Automatic logger name: {auto_db.logger.name}")
     auto_result = auto_db.query("SELECT * FROM users")
     print(f"Auto result: {auto_result}")
@@ -182,10 +182,13 @@ def main():
 
     # Show the pattern of logger names
     services = [
-        ("DatabaseService", injector.get(planner_input, DatabaseService)),
-        ("UserService", injector.get(planner_input, UserService)),
-        ("EmailService", injector.get(planner_input, EmailService)),
-        ("NotificationService", injector.get(planner_input, NotificationService)),
+        ("DatabaseService", injector.produce(injector.plan(planner_input)).get(DatabaseService)),
+        ("UserService", injector.produce(injector.plan(planner_input)).get(UserService)),
+        ("EmailService", injector.produce(injector.plan(planner_input)).get(EmailService)),
+        (
+            "NotificationService",
+            injector.produce(injector.plan(planner_input)).get(NotificationService),
+        ),
     ]
 
     for service_name, service in services:

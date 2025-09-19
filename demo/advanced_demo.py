@@ -188,7 +188,7 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=app_roots, activation=prod_activation)
-        app = injector.get(planner_input, Application)
+        app = injector.produce(injector.plan(planner_input)).get(Application)
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -208,7 +208,7 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=app_roots, activation=test_activation)
-        app = injector.get(planner_input, Application)
+        app = injector.produce(injector.plan(planner_input)).get(Application)
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -229,7 +229,7 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=app_roots, activation=caps_activation)
-        app = injector.get(planner_input, Application)
+        app = injector.produce(injector.plan(planner_input)).get(Application)
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -250,7 +250,7 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=app_roots, activation=dummy_activation)
-        app = injector.get(planner_input, Application)
+        app = injector.produce(injector.plan(planner_input)).get(Application)
         result = app.run()
         print(f"Result: {result}")
     except Exception as e:
@@ -263,7 +263,7 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=app_roots, activation=test_activation)
-        app = injector.get(planner_input, Application)
+        app = injector.produce(injector.plan(planner_input)).get(Application)
         print("✓ Application created without UnusedService")
     except Exception as e:
         print(f"Error: {e}")
@@ -274,7 +274,7 @@ def main():
         planner_input = PlannerInput(
             [base_module], roots=Roots.everything(), activation=test_activation
         )
-        injector.get(planner_input, UnusedService)
+        injector.produce(injector.plan(planner_input)).get(UnusedService)
         print("✓ UnusedService was created (demonstrates no garbage collection)")
     except Exception as e:
         print(f"Error: {e}")
@@ -288,8 +288,8 @@ def main():
     try:
         injector = Injector()
         planner_input = PlannerInput([base_module], roots=multi_roots, activation=test_activation)
-        app = injector.get(planner_input, Application)
-        injector.get(planner_input, UnusedService)
+        app = injector.produce(injector.plan(planner_input)).get(Application)
+        injector.produce(injector.plan(planner_input)).get(UnusedService)
         print("✓ Both Application and UnusedService created as specified by roots")
     except Exception as e:
         print(f"Error: {e}")

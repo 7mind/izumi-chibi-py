@@ -143,7 +143,7 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
         # Should automatically inject logger
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.get(planner_input, ServiceWithLogger)
+        service = injector.produce(injector.plan(planner_input)).get(ServiceWithLogger)
 
         self.assertIsInstance(service.logger, logging.Logger)
         # Logger name should be based on the location where it was requested
@@ -168,7 +168,7 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
         planner_input = PlannerInput([module])
 
         with self.assertRaises(Exception) as context:
-            injector.get(planner_input, ServiceWithNamedLogger)
+            injector.produce(injector.plan(planner_input)).get(ServiceWithNamedLogger)
 
         self.assertIn("No binding found", str(context.exception))
         self.assertIn("my-logger", str(context.exception))
@@ -190,7 +190,7 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
         # Should use explicit binding, not auto-injection
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.get(planner_input, ServiceWithLogger)
+        service = injector.produce(injector.plan(planner_input)).get(ServiceWithLogger)
 
         self.assertIs(service.logger, explicit_logger)
         self.assertEqual(service.logger.name, "explicit-logger")
@@ -207,7 +207,7 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        result = injector.get(planner_input, str)
+        result = injector.produce(injector.plan(planner_input)).get(str)
 
         self.assertIsInstance(result, str)
         self.assertIn("Service with logger:", result)
@@ -230,8 +230,8 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
         injector = Injector()
         planner_input = PlannerInput([module])
 
-        service_a = injector.get(planner_input, ServiceA)
-        service_b = injector.get(planner_input, ServiceB)
+        service_a = injector.produce(injector.plan(planner_input)).get(ServiceA)
+        service_b = injector.produce(injector.plan(planner_input)).get(ServiceB)
 
         # Both should have loggers
         self.assertIsInstance(service_a.logger, logging.Logger)
@@ -259,7 +259,7 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        user_service = injector.get(planner_input, UserService)
+        user_service = injector.produce(injector.plan(planner_input)).get(UserService)
 
         # Both services should have loggers
         self.assertIsInstance(user_service.logger, logging.Logger)
@@ -280,7 +280,7 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        injector.get(planner_input, TestService)
+        injector.produce(injector.plan(planner_input)).get(TestService)
 
         # Should have called getLogger with a meaningful name
         mock_get_logger.assert_called()

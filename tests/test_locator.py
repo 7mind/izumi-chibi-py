@@ -183,7 +183,7 @@ class TestLocator(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.get(planner_input, Service)
+        service = injector.produce(injector.plan(planner_input)).get(Service)
 
         self.assertIsInstance(service, Service)
         self.assertEqual(service.get_message(), "Hello World")

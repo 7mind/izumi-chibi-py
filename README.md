@@ -60,7 +60,7 @@ module.make(UserService).using().type(UserService)
 # Create injector and get service
 injector = Injector()
 planner_input = PlannerInput([module])
-user_service = injector.get(planner_input, UserService)
+user_service = injector.produce(injector.plan(planner_input)).get(UserService)
 
 # Use the service
 result = user_service.create_user("alice")
@@ -166,7 +166,7 @@ module.make(UserService).using().type(UserService)
 
 injector = Injector()
 planner_input = PlannerInput([module])
-user_service = injector.get(planner_input, UserService)
+user_service = injector.produce(injector.plan(planner_input)).get(UserService)
 ```
 
 ### Factory Bindings for Non-Singleton Semantics
@@ -194,7 +194,7 @@ module.make(Factory[UserSession]).using().factory_type(UserSession)
 
 injector = Injector()
 planner_input = PlannerInput([module])
-factory = injector.get(planner_input, Factory[UserSession])
+factory = injector.produce(injector.plan(planner_input)).get(Factory[UserSession])
 
 # Create new instances with runtime parameters
 session1 = factory.create("user123", **{"api-key": "secret1"})
@@ -226,7 +226,7 @@ module.make(DatabaseService).using().type(DatabaseService)
 
 injector = Injector()
 planner_input = PlannerInput([module])
-db_service = injector.get(planner_input, DatabaseService)
+db_service = injector.produce(injector.plan(planner_input)).get(DatabaseService)
 ```
 
 ### Dependency Graph Validation
@@ -289,7 +289,7 @@ module.make(CommandProcessor).using().type(CommandProcessor)
 
 injector = Injector()
 planner_input = PlannerInput([module])
-processor = injector.get(planner_input, CommandProcessor)
+processor = injector.produce(injector.plan(planner_input)).get(CommandProcessor)
 # processor.handlers contains instances of both UserHandler and AdminHandler
 ```
 
@@ -332,11 +332,11 @@ injector = Injector()
 
 # Production setup
 prod_input = PlannerInput([module], activation=prod_activation)
-prod_db = injector.get(prod_input, Database)  # Gets PostgresDatabase
+prod_db = injector.produce(injector.plan(prod_input)).get(Database)  # Gets PostgresDatabase
 
 # Test setup
 test_input = PlannerInput([module], activation=test_activation)
-test_db = injector.get(test_input, Database)  # Gets MockDatabase
+test_db = injector.produce(injector.plan(test_input)).get(Database)  # Gets MockDatabase
 ```
 
 ## Advanced Usage Patterns
@@ -376,7 +376,7 @@ def business_logic(service: UserService, config: Config) -> str:
 result = injector.produce_run(planner_input, business_logic)
 
 # Pattern 3: Simple get (for quick usage)
-service = injector.get(planner_input, UserService)
+service = injector.produce(injector.plan(planner_input)).get(UserService)
 ```
 
 ### Locator Inheritance

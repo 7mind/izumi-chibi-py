@@ -161,12 +161,12 @@ def main():
         planner_input = PlannerInput([prod_module])
 
         # Get various services
-        user_service = injector.get(planner_input, UserService)
+        user_service = injector.produce(injector.plan(planner_input)).get(UserService)
         result = user_service.create_user("alice")
         print(f"Result: {result}")
 
         # Get command executor and run commands
-        executor = injector.get(planner_input, CommandExecutor)
+        executor = injector.produce(injector.plan(planner_input)).get(CommandExecutor)
         command_results = executor.execute_all()
         for cmd_result in command_results:
             print(f"Command result: {cmd_result}")
@@ -182,11 +182,11 @@ def main():
         injector = Injector()
         planner_input = PlannerInput([prod_module, test_module])
 
-        config = injector.get(planner_input, Config)
+        config = injector.produce(injector.plan(planner_input)).get(Config)
         print(f"Config: {config}")
 
         # This will use the test database
-        database = injector.get(planner_input, Database, "test")
+        database = injector.produce(injector.plan(planner_input)).get(Database, "test")
         result = database.query("SELECT * FROM users")
         print(f"Test DB result: {result}")
 

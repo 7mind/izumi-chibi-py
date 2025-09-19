@@ -100,12 +100,13 @@ def main():
     named_module.make(ConfigurableService).using().type(ConfigurableService)
 
     named_input = PlannerInput([named_module])
-    service = injector.get(named_input, ConfigurableService)
+    locator = injector.produce(injector.plan(named_input))
+    service = locator.get(ConfigurableService)
     print(f"Named dependency result: {service.make_api_call()}")
 
     # Demonstrate accessing named dependencies directly
-    api_key = injector.get(named_input, str, "api-key")
-    timeout = injector.get(named_input, int, "timeout")
+    api_key = locator.get(str, "api-key")
+    timeout = locator.get(int, "timeout")
     print(f"Direct access - API Key: {api_key}, Timeout: {timeout}")
 
 

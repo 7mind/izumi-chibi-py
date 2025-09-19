@@ -5,14 +5,12 @@ Dependency resolution and execution engine.
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable
 from typing import Any
 
 from .activation import Activation
 from .bindings import Binding
 from .functoid import Functoid
 from .graph import DependencyGraph
-from .introspection import SignatureIntrospector
 from .keys import DIKey
 from .roots import Roots
 
@@ -112,23 +110,9 @@ class DependencyResolver:
         if not dependency_keys:
             return functoid.call()
 
-        # For dependencies, we need to resolve them and call with proper parameter mapping
-        # Use existing helper methods that handle parameter name mapping correctly
-        if functoid.original_class is not None:
-            return self._instantiate_class(functoid.original_class)
-        elif functoid.original_func is not None:
-            return self._call_factory(functoid.original_func)
-        else:
-            # For other cases (like composed functoids), try calling with no args
-            return functoid.call()
-
-    def _instantiate_class(self, cls: type | Any | Callable[..., Any]) -> Any:
-        """Instantiate a class by resolving its dependencies."""
-        if inspect.isclass(cls):
-            dependencies = SignatureIntrospector.extract_from_class(cls)
-        else:
-            dependencies = SignatureIntrospector.extract_from_callable(cls)
-        kwargs = {}
+        # Get dependencies from functoid and resolve them
+        dependencies = functoid.sig()
+        resolved_args: list[Any] = []
 
         for dep in dependencies:
             # Skip Any types which are usually introspection failures
@@ -140,32 +124,12 @@ class DependencyResolver:
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = DIKey(dep.type_hint, dep.dependency_name)
-                kwargs[dep.name] = self.resolve(dep_key)
-            # For optional dependencies with defaults, let the class handle them
+                di_key = DIKey(dep.type_hint, dep.dependency_name)
+                resolved_value = self.resolve(di_key)
+                resolved_args.append(resolved_value)
+            # For optional dependencies with defaults, let the functoid handle them
 
-        return cls(**kwargs)
-
-    def _call_factory(self, factory: Callable[..., Any]) -> Any:
-        """Call a factory function by resolving its dependencies."""
-        dependencies = SignatureIntrospector.extract_from_callable(factory)
-        kwargs = {}
-
-        for dep in dependencies:
-            # Skip Any types which are usually introspection failures
-            if dep.type_hint == Any:
-                continue
-            if (
-                (not dep.is_optional or dep.default_value == inspect.Parameter.empty)
-                and (isinstance(dep.type_hint, type) or hasattr(dep.type_hint, "__origin__"))
-                and not isinstance(dep.type_hint, str)
-            ):
-                # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = DIKey(dep.type_hint, dep.dependency_name)
-                kwargs[dep.name] = self.resolve(dep_key)
-            # For optional dependencies with defaults, let the factory handle them
-
-        return factory(**kwargs)
+        return functoid.call(*resolved_args)
 
     def clear_instances(self) -> None:
         """Clear all resolved instances (useful for testing)."""

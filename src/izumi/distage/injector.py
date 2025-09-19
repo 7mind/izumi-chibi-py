@@ -12,7 +12,6 @@ from typing import Any, TypeVar
 from .bindings import Binding
 from .functoid import Functoid
 from .graph import DependencyGraph
-from .introspection import SignatureIntrospector
 from .keys import DIKey
 from .locator import Locator
 from .logger_injection import AutoLoggerManager
@@ -123,25 +122,6 @@ class Injector:
                 resolve_instance(binding_key)
 
         return Locator(plan, instances, self._parent_locator)
-
-    def get(self, input: PlannerInput, target_type: type[T] | Any, name: str | None = None) -> T:
-        """
-        Convenience method to resolve a single type.
-
-        This creates a Plan and Locator behind the scenes to resolve a single type.
-        Consider using produce_run() for better dependency injection patterns.
-
-        Args:
-            input: The PlannerInput containing modules, roots, and activation
-            target_type: The type to resolve
-            name: Optional name to distinguish between different bindings
-
-        Returns:
-            An instance of the requested type
-        """
-        plan = self.plan(input)
-        locator = self.produce(plan)
-        return locator.get(target_type, name)  # type: ignore[no-any-return]
 
     def _build_graph(self, input: PlannerInput) -> DependencyGraph:
         """Build the dependency graph from PlannerInput."""
@@ -272,25 +252,9 @@ class Injector:
         if not dependency_keys:
             return functoid.call()
 
-        # For dependencies, we need to resolve them and call with proper parameter mapping
-        # Use existing helper methods that handle parameter name mapping correctly
-        if functoid.original_class is not None:
-            return self._instantiate_class(functoid.original_class, resolve_fn)
-        elif functoid.original_func is not None:
-            return self._call_factory(functoid.original_func, resolve_fn)
-        else:
-            # For other cases (like composed functoids), try calling with no args
-            return functoid.call()
-
-    def _instantiate_class(
-        self, cls: type | Any | Callable[..., Any], resolve_fn: Callable[[DIKey], Any]
-    ) -> Any:
-        """Instantiate a class by resolving its dependencies."""
-        if inspect.isclass(cls):
-            dependencies = SignatureIntrospector.extract_from_class(cls)
-        else:
-            dependencies = SignatureIntrospector.extract_from_callable(cls)
-        kwargs = {}
+        # Get dependencies from functoid and resolve them
+        dependencies = functoid.sig()
+        resolved_args: list[Any] = []
 
         for dep in dependencies:
             # Skip Any types which are usually introspection failures
@@ -302,54 +266,29 @@ class Injector:
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = DIKey(dep.type_hint, dep.dependency_name)
+                di_key = DIKey(dep.type_hint, dep.dependency_name)
 
                 # Special handling for automatic logger injection
-                if AutoLoggerManager.should_auto_inject_logger(dep_key):
+                if AutoLoggerManager.should_auto_inject_logger(di_key):
                     # First try to resolve through normal DI, fallback to auto-injection
                     try:
-                        kwargs[dep.name] = resolve_fn(dep_key)
+                        resolved_value = resolve_fn(di_key)
                     except ValueError:
-                        # Create a class-specific logger as fallback
-                        logger_name = f"{cls.__module__}.{cls.__name__}"
-                        kwargs[dep.name] = logging.getLogger(logger_name)
+                        # Create an appropriate logger as fallback
+                        if functoid.original_class:
+                            logger_name = f"{functoid.original_class.__module__}.{functoid.original_class.__name__}"
+                        elif functoid.original_func:
+                            logger_name = f"{functoid.original_func.__module__}.{functoid.original_func.__name__}"
+                        else:
+                            logger_name = "unknown"
+                        resolved_value = logging.getLogger(logger_name)
                 else:
-                    kwargs[dep.name] = resolve_fn(dep_key)
-            # For optional dependencies with defaults, let the class handle them
+                    resolved_value = resolve_fn(di_key)
 
-        return cls(**kwargs)
+                resolved_args.append(resolved_value)
+            # For optional dependencies with defaults, let the functoid handle them
 
-    def _call_factory(self, factory: Callable[..., Any], resolve_fn: Callable[[DIKey], Any]) -> Any:
-        """Call a factory function by resolving its dependencies."""
-        dependencies = SignatureIntrospector.extract_from_callable(factory)
-        kwargs = {}
-
-        for dep in dependencies:
-            # Skip Any types which are usually introspection failures
-            if dep.type_hint == Any:
-                continue
-            if (
-                (not dep.is_optional or dep.default_value == inspect.Parameter.empty)
-                and (isinstance(dep.type_hint, type) or hasattr(dep.type_hint, "__origin__"))
-                and not isinstance(dep.type_hint, str)
-            ):
-                # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = DIKey(dep.type_hint, dep.dependency_name)
-
-                # Special handling for automatic logger injection
-                if AutoLoggerManager.should_auto_inject_logger(dep_key):
-                    # First try to resolve through normal DI, fallback to auto-injection
-                    try:
-                        kwargs[dep.name] = resolve_fn(dep_key)
-                    except ValueError:
-                        # For factory functions, use the function name
-                        logger_name = f"{factory.__module__}.{factory.__name__}"
-                        kwargs[dep.name] = logging.getLogger(logger_name)
-                else:
-                    kwargs[dep.name] = resolve_fn(dep_key)
-            # For optional dependencies with defaults, let the factory handle them
-
-        return factory(**kwargs)
+        return functoid.call(*resolved_args)
 
     def _create_factory(
         self, target_type: type, resolve_fn: Callable[[DIKey], Any], functoid: Functoid[Any]

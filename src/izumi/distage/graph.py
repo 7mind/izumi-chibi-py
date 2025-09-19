@@ -150,15 +150,7 @@ class DependencyGraph:
                     dep_node.dependents.add(node.key)
 
     def _extract_dependencies(self, binding: Binding) -> list[DIKey]:
-        """Extract dependency keys from a binding."""
-        functoid = binding.functoid
-
-        # Use the functoid's keys() method to get dependencies
-        try:
-            return functoid.keys()
-        except Exception:
-            # If introspection fails, assume no dependencies
-            return []
+        return binding.functoid.keys()
 
     def _check_missing_dependencies(self) -> None:
         """Check for missing dependencies."""
