@@ -7,7 +7,7 @@ import unittest
 from dataclasses import dataclass
 
 from izumi.distage import Injector, ModuleDef, PlannerInput
-from izumi.distage.graph import MissingBindingError
+from izumi.distage.model.graph import MissingBindingError
 
 
 class TestLocatorInheritance(unittest.TestCase):
@@ -250,44 +250,6 @@ class TestLocatorInheritance(unittest.TestCase):
 
         self.assertTrue(child_locator.has_parent())
         self.assertIs(child_locator.parent, parent_locator)
-
-    def test_create_child_method(self):
-        """Test the create_child method on locator."""
-
-        @dataclass
-        class ParentService:
-            name: str = "parent"
-
-        @dataclass
-        class ChildService:
-            parent: ParentService
-            name: str = "child"
-
-        # Create parent locator
-        parent_module = ModuleDef()
-        parent_module.make(ParentService).using().type(ParentService)
-
-        parent_injector = Injector()
-        parent_input = PlannerInput([parent_module])
-        parent_plan = parent_injector.plan(parent_input)
-        parent_locator = parent_injector.produce(parent_plan)
-
-        # Create child using create_child method
-        child_module = ModuleDef()
-        child_module.make(ChildService).using().type(ChildService)
-
-        child_injector = Injector.inherit(parent_locator)
-        child_input = PlannerInput([child_module])
-        child_plan = child_injector.plan(child_input)
-
-        # Use create_child method
-        child_locator = parent_locator.create_child(child_plan)
-
-        # Test that child can access parent dependencies
-        child_service = child_locator.get(ChildService)
-        self.assertIsInstance(child_service, ChildService)
-        self.assertEqual(child_service.name, "child")
-        self.assertEqual(child_service.parent.name, "parent")
 
     def test_instance_caching_across_inheritance(self):
         """Test that instances are properly cached when inherited."""

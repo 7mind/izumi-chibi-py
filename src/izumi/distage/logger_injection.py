@@ -12,9 +12,9 @@ import logging
 from types import FrameType
 from typing import Any
 
-from .bindings import Binding
+from .model import Binding
 from .functoid import function_functoid
-from .keys import DIKey
+from .model import DIKey
 
 
 class LoggerLocationIntrospector:

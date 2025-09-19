@@ -7,7 +7,7 @@ import unittest
 from dataclasses import dataclass
 
 from izumi.distage import Injector, ModuleDef, PlannerInput
-from izumi.distage.graph import CircularDependencyError, MissingBindingError
+from izumi.distage.model.graph import CircularDependencyError, MissingBindingError
 from izumi.distage.introspection import SignatureIntrospector
 
 

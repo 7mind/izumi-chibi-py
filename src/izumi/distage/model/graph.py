@@ -6,16 +6,11 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
-from .activation import Activation
+from ..activation import Activation
 from .bindings import Binding
 from .keys import DIKey, SetElementKey
 from .operations import CreateFactory, CreateSet, ExecutableOp, Provide
-
-if TYPE_CHECKING:
-    from .locator import Locator
-
 
 class CircularDependencyError(Exception):
     """Raised when circular dependencies are detected."""
@@ -198,7 +193,7 @@ class DependencyGraph:
             for dep_key in node.dependencies:
                 if dep_key not in self._operations:
                     # Check if this is an auto-injectable logger
-                    from .logger_injection import AutoLoggerManager
+                    from ..logger_injection import AutoLoggerManager
 
                     if AutoLoggerManager.should_auto_inject_logger(dep_key):
                         # Skip validation for auto-injectable loggers
@@ -216,7 +211,7 @@ class DependencyGraph:
             for dep_key in node.dependencies:
                 if dep_key not in self._operations:
                     # Check if this is an auto-injectable logger
-                    from .logger_injection import AutoLoggerManager
+                    from ..logger_injection import AutoLoggerManager
 
                     if AutoLoggerManager.should_auto_inject_logger(dep_key):
                         # Skip validation for auto-injectable loggers

@@ -12,7 +12,7 @@ from izumi.distage.functoid import (
     set_element_functoid,
     value_functoid,
 )
-from izumi.distage.keys import DIKey, SetElementKey
+from izumi.distage.model import DIKey, SetElementKey
 
 
 class TestAlgebraicImplementations(unittest.TestCase):

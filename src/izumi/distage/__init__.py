@@ -15,17 +15,14 @@ from beartype import BeartypeConf, beartype
 from beartype.roar import BeartypeCallHintViolation
 
 from .activation import Activation, AxisChoiceDef, StandardAxis
-from .bindings import Binding
 from .dsl import ModuleDef
 from .factory import Factory
 from .functoid import Functoid
-from .graph import DependencyGraph
 from .injector import Injector
-from .keys import DIKey, Id
-from .locator import Locator
-from .plan import Plan
+from .locator import create_locator
+from .locator_base import Locator
+from .model import Binding, DependencyGraph, DIKey, Plan, Id
 from .planner_input import PlannerInput
-from .resolver import DependencyResolver
 from .roots import Roots
 from .tag import Tag
 
@@ -65,10 +62,10 @@ __all__ = [
     "Plan",
     "PlannerInput",
     "Locator",
+    "create_locator",
     "Tag",
     "Binding",
     "DependencyGraph",
-    "DependencyResolver",
     "Roots",
     "DIKey",
     "Id",

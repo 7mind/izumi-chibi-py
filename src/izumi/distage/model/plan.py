@@ -7,10 +7,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypeVar
 
-from .activation import Activation
+from ..activation import Activation
 from .graph import DependencyGraph
 from .keys import DIKey
-from .roots import Roots
+from ..roots import Roots
 
 T = TypeVar("T")
 
@@ -39,6 +39,39 @@ class Plan:
         # The validation should have been done before creating the Plan
         if not getattr(self.graph, "_validated", False):
             raise ValueError("Plan created with unvalidated graph")
+
+    @staticmethod
+    def empty() -> Plan:
+        """
+        Create an empty Plan that has no operations and can be used as a null object.
+
+        Returns:
+            An empty Plan instance
+        """
+        from .graph import DependencyGraph
+        from .activation import Activation
+        from .roots import Roots
+
+        # Create an empty graph with no operations
+        empty_graph = DependencyGraph()
+        empty_graph.generate_operations()  # Creates empty operations dict
+        empty_graph._validated = True  # Mark as validated since it's empty
+
+        return Plan(
+            graph=empty_graph,
+            roots=Roots.empty(),
+            activation=Activation.empty(),
+            topology=[]
+        )
+
+    def is_empty(self) -> bool:
+        """
+        Check if this is an empty plan.
+
+        Returns:
+            True if this plan has no operations
+        """
+        return len(self.graph.get_operations()) == 0
 
     def keys(self) -> set[DIKey]:
         """Get all available keys in this plan."""

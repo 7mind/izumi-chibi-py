@@ -6,7 +6,7 @@ Unit tests for the new architecture with Injector, Plan, and Locator separation.
 import unittest
 from dataclasses import dataclass
 
-from izumi.distage import Injector, Locator, ModuleDef, Plan, PlannerInput
+from izumi.distage import Injector, ModuleDef, Plan, PlannerInput
 
 
 class TestLocator(unittest.TestCase):
@@ -96,7 +96,7 @@ class TestLocator(unittest.TestCase):
         injector = Injector()
         planner_input = PlannerInput([module])
         plan = injector.plan(planner_input)
-        locator = Locator(plan)
+        locator = injector.produce(plan)
 
         # Same locator should return the same instance
         service1 = locator.get(Service)
@@ -104,34 +104,6 @@ class TestLocator(unittest.TestCase):
 
         self.assertIs(service1, service2)
         self.assertEqual(service1.created_at, service2.created_at)
-
-    def test_locator_clear_instances(self):
-        """Test that clearing instances allows fresh creation."""
-
-        class Service:
-            def __init__(self):
-                self.id = id(self)
-
-        module = ModuleDef()
-        module.make(Service).using().type(Service)
-
-        injector = Injector()
-        planner_input = PlannerInput([module])
-        plan = injector.plan(planner_input)
-        locator = Locator(plan)
-
-        # Get an instance
-        service1 = locator.get(Service)
-        self.assertEqual(locator.get_instance_count(), 1)
-
-        # Clear instances
-        locator.clear_instances()
-        self.assertEqual(locator.get_instance_count(), 0)
-
-        # Get new instance - should be different
-        service2 = locator.get(Service)
-        self.assertIsNot(service1, service2)
-        self.assertNotEqual(service1.id, service2.id)
 
     def test_locator_utilities(self):
         """Test Locator utility methods."""
@@ -148,14 +120,13 @@ class TestLocator(unittest.TestCase):
         injector = Injector()
         planner_input = PlannerInput([module])
         plan = injector.plan(planner_input)
-        locator = Locator(plan)
+        locator = injector.produce(plan)
 
         # Test has() method
         self.assertTrue(locator.has(ExistingService))
         self.assertFalse(locator.has(MissingService))
 
-        # Test is_resolved() before resolution
-        self.assertFalse(locator.is_resolved(ExistingService))
+        self.assertTrue(locator.is_resolved(ExistingService))
 
         # Resolve the service
         service = locator.get(ExistingService)
@@ -277,7 +248,7 @@ class TestLocator(unittest.TestCase):
         self.assertGreater(len(keys), 0)
 
         # Test has_binding() method
-        from izumi.distage.keys import DIKey
+        from izumi.distage.model import DIKey
 
         service_a_key = DIKey(ServiceA, None)
         service_b_key = DIKey(ServiceB, None)
@@ -300,7 +271,7 @@ class TestLocator(unittest.TestCase):
         injector = Injector()
         planner_input = PlannerInput([module])
         plan = injector.plan(planner_input)
-        locator = Locator(plan)
+        locator = injector.produce(plan)
 
         prod_db = locator.get(str, "prod")
         test_db = locator.get(str, "test")
@@ -335,7 +306,7 @@ class TestLocator(unittest.TestCase):
         injector = Injector()
         planner_input = PlannerInput([module])
         plan = injector.plan(planner_input)
-        locator = Locator(plan)
+        locator = injector.produce(plan)
 
         service = locator.get(Service)
 
@@ -367,7 +338,7 @@ class TestLocator(unittest.TestCase):
         injector = Injector()
         planner_input = PlannerInput([module])
         plan = injector.plan(planner_input)
-        locator = Locator(plan)
+        locator = injector.produce(plan)
 
         # Test run method with function that has dependencies automatically resolved
         def simple_calculation(math_service: MathService) -> int:

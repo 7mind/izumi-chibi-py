@@ -199,7 +199,7 @@ class TestNamedDependencies(unittest.TestCase):
         injector = Injector()
         planner_input = PlannerInput([module])
 
-        from izumi.distage.graph import MissingBindingError
+        from izumi.distage.model.graph import MissingBindingError
 
         with self.assertRaises(MissingBindingError) as cm:
             injector.produce(injector.plan(planner_input)).get(Service)

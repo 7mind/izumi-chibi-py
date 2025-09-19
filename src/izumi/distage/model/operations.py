@@ -93,7 +93,7 @@ class CreateFactory(ExecutableOp):
 
     def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:
         """Execute by creating a Factory instance."""
-        from .factory import Factory
+        from ..factory import Factory
 
         # Create a locator-like object that uses a resolve function
         class ResolverLocator:

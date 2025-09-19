@@ -72,7 +72,7 @@ class TestAutoLoggerManager(unittest.TestCase):
 
     def test_should_auto_inject_logger(self):
         """Test logger auto-injection detection."""
-        from izumi.distage.keys import DIKey
+        from izumi.distage.model import DIKey
 
         # Should auto-inject for unnamed Logger
         logger_key_unnamed = DIKey(logging.Logger, None)
@@ -99,7 +99,7 @@ class TestAutoLoggerManager(unittest.TestCase):
         binding = AutoLoggerManager.create_logger_binding("test.location")
 
         # Check that binding key is correct
-        from izumi.distage.keys import DIKey
+        from izumi.distage.model import DIKey
 
         expected_key = DIKey(logging.Logger, "__logger__.test.location")
         self.assertEqual(binding.key, expected_key)
@@ -113,7 +113,7 @@ class TestAutoLoggerManager(unittest.TestCase):
 
     def test_rewrite_logger_key(self):
         """Test logger key rewriting."""
-        from izumi.distage.keys import DIKey
+        from izumi.distage.model import DIKey
 
         original_key = DIKey(logging.Logger, None)
         rewritten_key = AutoLoggerManager.rewrite_logger_key(original_key, "test.location")

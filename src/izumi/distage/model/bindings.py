@@ -7,11 +7,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from .activation import Activation
+from ..activation import Activation
 from .keys import DIKey, SetElementKey
 
 if TYPE_CHECKING:
-    from .functoid import Functoid
+    from ..functoid import Functoid
 
 
 @dataclass(frozen=True)

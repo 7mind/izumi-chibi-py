@@ -11,7 +11,7 @@ from collections.abc import Callable
 from typing import Any, TypeVar
 
 from .introspection import SignatureIntrospector
-from .keys import DIKey
+from .model import DIKey
 
 T = TypeVar("T")
 

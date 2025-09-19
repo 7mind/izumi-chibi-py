@@ -9,14 +9,10 @@ import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from .bindings import Binding
 from .functoid import Functoid
-from .graph import DependencyGraph
-from .keys import DIKey
-from .locator import Locator
+from .locator_base import Locator
 from .logger_injection import AutoLoggerManager
-from .operations import ExecutableOp
-from .plan import Plan
+from .model import DependencyGraph, DIKey, ExecutableOp, Plan
 from .planner_input import PlannerInput
 
 T = TypeVar("T")
@@ -42,7 +38,9 @@ class Injector:
                            When resolving dependencies, this locator will be checked
                            if dependencies are missing from the current bindings.
         """
-        self._parent_locator = parent_locator
+        # Use empty locator instead of None for cleaner null object pattern
+        from .locator_base import Locator
+        self._parent_locator = parent_locator if parent_locator is not None else Locator.empty()
 
     def plan(self, input: PlannerInput) -> Plan:
         """
@@ -122,7 +120,8 @@ class Injector:
             if binding_key not in instances:
                 resolve_instance(binding_key)
 
-        return Locator(plan, instances, self._parent_locator)
+        from .locator_impl import LocatorImpl
+        return LocatorImpl(plan, instances, self._parent_locator)
 
     def _build_graph(self, input: PlannerInput) -> DependencyGraph:
         """Build the dependency graph from PlannerInput."""
@@ -145,7 +144,7 @@ class Injector:
 
         # If we have a parent locator, we need to be more lenient with validation
         # because missing dependencies might be available from the parent
-        if self._parent_locator is not None:
+        if not self._parent_locator.is_empty():
             graph.validate_with_parent_locator(self._parent_locator)
         else:
             graph.validate()
@@ -176,7 +175,7 @@ class Injector:
 
         if not operation:
             # Check parent locator if available
-            if self._parent_locator is not None:
+            if not self._parent_locator.is_empty():
                 try:
                     return self._parent_locator.get(key.target_type, key.name)  # pyright: ignore[reportUnknownVariableType]
                 except ValueError:
@@ -188,7 +187,7 @@ class Injector:
 
     def _execute_operation(self, operation: ExecutableOp, resolve_fn: Callable[[DIKey], Any]) -> Any:
         """Execute an operation with resolved dependencies."""
-        from .operations import CreateFactory
+        from .model import CreateFactory
 
         # Special handling for CreateFactory operations
         if isinstance(operation, CreateFactory):
