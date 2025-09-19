@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from .model import DIKey, Plan
+from .model import InstanceKey, Plan
 
 T = TypeVar("T")
 
@@ -22,11 +22,11 @@ class Locator(ABC):
     """
 
     @abstractmethod
-    def has_key_locally(self, key: DIKey) -> bool:
+    def has_key_locally(self, key: InstanceKey) -> bool:
         """Check if this locator has the key in its local instances."""
 
     @abstractmethod
-    def has_key(self, key: DIKey) -> bool:
+    def has_key(self, key: InstanceKey) -> bool:
         """Check if this locator (or its parent chain) has the key."""
 
     @abstractmethod
@@ -105,19 +105,6 @@ class Locator(ABC):
     def has_parent(self) -> bool:
         """Check if this locator has a parent."""
 
-    @abstractmethod
-    def create_child(self, plan: Plan, instances: dict[DIKey, object] | None = None) -> Locator:
-        """
-        Create a child locator with this locator as parent.
-
-        Args:
-            plan: The plan for the child locator
-            instances: Optional initial instances
-
-        Returns:
-            A new child locator
-        """
-
     @staticmethod
     def empty() -> Locator:
         """
@@ -150,11 +137,11 @@ class LocatorEmpty(Locator):
             cls._instance = cls()
         return cls._instance
 
-    def has_key_locally(self, key: DIKey) -> bool:  # noqa: ARG002
+    def has_key_locally(self, key: InstanceKey) -> bool:  # noqa: ARG002
         """Empty locator has no keys locally."""
         return False
 
-    def has_key(self, key: DIKey) -> bool:  # noqa: ARG002
+    def has_key(self, key: InstanceKey) -> bool:  # noqa: ARG002
         """Empty locator has no keys."""
         return False
 
@@ -164,7 +151,7 @@ class LocatorEmpty(Locator):
 
     def get(self, target_type: type[T] | Any, name: str | None = None) -> T:
         """Empty locator cannot provide any instances."""
-        key = DIKey(target_type, name)
+        key = InstanceKey(target_type, name)
         raise ValueError(f"Empty locator cannot provide {key}")
 
     def find(self, target_type: type[T], name: str | None = None) -> T | None:  # noqa: ARG002
@@ -196,9 +183,3 @@ class LocatorEmpty(Locator):
     def has_parent(self) -> bool:
         """Empty locator has no parent."""
         return False
-
-    def create_child(self, plan: Plan, instances: dict[DIKey, object] | None = None) -> Locator:
-        """Create a child from empty locator."""
-        # Import here to avoid circular imports
-        from .locator_impl import LocatorImpl
-        return LocatorImpl(plan, instances or {}, self)

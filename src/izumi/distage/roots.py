@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from .model import DependencyGraph, DIKey
+from .model import DependencyGraph, InstanceKey
 
 T = TypeVar("T")
 
@@ -14,19 +14,19 @@ T = TypeVar("T")
 class Roots:
     """Defines which objects should be instantiated from the dependency graph."""
 
-    def __init__(self, keys: list[DIKey]):
+    def __init__(self, keys: list[InstanceKey]):
         super().__init__()
         self._keys = keys
 
     @property
-    def keys(self) -> list[DIKey]:
+    def keys(self) -> list[InstanceKey]:
         """Get all root keys."""
         return self._keys.copy()
 
     @classmethod
     def target(cls, *target_types: type) -> Roots:
         """Create roots targeting specific types."""
-        keys = [DIKey.get(target_type) for target_type in target_types]
+        keys = [InstanceKey.get(target_type) for target_type in target_types]
         return cls(keys)
 
     @classmethod
@@ -71,14 +71,14 @@ class RootsFinder:
     """Finds all dependencies reachable from the given roots."""
 
     @staticmethod
-    def find_reachable_keys(roots: Roots, graph: DependencyGraph) -> set[DIKey]:
+    def find_reachable_keys(roots: Roots, graph: DependencyGraph) -> set[InstanceKey]:
         """Find all binding keys reachable from the roots."""
         if roots.is_everything():
             # Include all bindings
             return set(graph.get_all_bindings().keys())
 
-        visited: set[DIKey] = set()
-        to_visit: set[DIKey] = set()
+        visited: set[InstanceKey] = set()
+        to_visit: set[InstanceKey] = set()
 
         # Start with root keys
         for root_key in roots.keys:

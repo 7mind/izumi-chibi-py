@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from ..activation import Activation
-from .keys import DIKey, SetElementKey
+from .keys import InstanceKey, SetElementKey
 
 if TYPE_CHECKING:
     from ..functoid import Functoid
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class Binding:
     """A dependency injection binding."""
 
-    key: DIKey | SetElementKey
+    key: InstanceKey | SetElementKey
     functoid: Functoid[Any]
     activation_tags: set[Any] | None = None  # Use Any to avoid circular import issues
     is_factory: bool = False  # Flag to indicate if this is a Factory[T] binding

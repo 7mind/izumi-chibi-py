@@ -28,7 +28,7 @@ class Id:
 
 
 @dataclass(frozen=True)
-class AbstractDIKey(ABC):
+class DIKey(ABC):
     """Abstract base class for dependency injection keys."""
 
     @abstractmethod
@@ -41,14 +41,14 @@ class AbstractDIKey(ABC):
 
 
 @dataclass(frozen=True)
-class DIKey(AbstractDIKey):
+class InstanceKey(DIKey):
     """A key that identifies a specific dependency in the object graph."""
 
     target_type: type
     name: str | None = None
 
     @classmethod
-    def get(cls, target_type: type[T], name: str | None = None) -> DIKey:
+    def get(cls, target_type: type[T], name: str | None = None) -> InstanceKey:
         """Create a DIKey for the given type and optional name."""
         return cls(target_type, name)
 
@@ -62,11 +62,11 @@ class DIKey(AbstractDIKey):
 
 
 @dataclass(frozen=True)
-class SetElementKey(AbstractDIKey):
+class SetElementKey(DIKey):
     """A key that identifies a specific element within a set binding."""
 
-    set_key: DIKey
-    element_key: DIKey
+    set_key: InstanceKey
+    element_key: InstanceKey
 
     def __str__(self) -> str:
         return f"{self.set_key}[{self.element_key}]"

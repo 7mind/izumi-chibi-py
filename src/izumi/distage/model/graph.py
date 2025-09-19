@@ -10,14 +10,14 @@ from typing import Any
 
 from ..activation import Activation
 from .bindings import Binding
-from .keys import DIKey, SetElementKey
+from .keys import InstanceKey, SetElementKey
 from .operations import CreateFactory, CreateSet, ExecutableOp, Provide
 
 
 class CircularDependencyError(Exception):
     """Raised when circular dependencies are detected."""
 
-    def __init__(self, cycle: list[DIKey]):
+    def __init__(self, cycle: list[InstanceKey]):
         self.cycle = cycle
         cycle_str = " -> ".join(str(key) for key in cycle)
         super().__init__(f"Circular dependency detected: {cycle_str}")
@@ -26,7 +26,7 @@ class CircularDependencyError(Exception):
 class MissingBindingError(Exception):
     """Raised when a required binding is not found."""
 
-    def __init__(self, key: DIKey, dependent: DIKey | None = None):
+    def __init__(self, key: InstanceKey, dependent: InstanceKey | None = None):
         self.key = key
         self.dependent = dependent
         msg = f"No binding found for {key}"
@@ -39,10 +39,10 @@ class MissingBindingError(Exception):
 class GraphNode:
     """A node in the dependency graph."""
 
-    key: DIKey
+    key: InstanceKey
     operation: ExecutableOp
-    dependencies: list[DIKey]
-    dependents: set[DIKey]
+    dependencies: list[InstanceKey]
+    dependents: set[InstanceKey]
 
     def __post_init__(self) -> None:
         self.dependents = set()
@@ -53,11 +53,11 @@ class DependencyGraph:
 
     def __init__(self) -> None:
         super().__init__()
-        self._bindings: dict[DIKey, Binding] = {}
-        self._alternative_bindings: dict[DIKey, list[Binding]] = defaultdict(list)
-        self._operations: dict[DIKey, ExecutableOp] = {}
-        self._nodes: dict[DIKey, GraphNode] = {}
-        self._set_bindings: dict[DIKey, list[Binding]] = defaultdict(list)
+        self._bindings: dict[InstanceKey, Binding] = {}
+        self._alternative_bindings: dict[InstanceKey, list[Binding]] = defaultdict(list)
+        self._operations: dict[InstanceKey, ExecutableOp] = {}
+        self._nodes: dict[InstanceKey, GraphNode] = {}
+        self._set_bindings: dict[InstanceKey, list[Binding]] = defaultdict(list)
         self._validated = False
 
     def add_binding(self, binding: Binding) -> None:
@@ -67,7 +67,7 @@ class DependencyGraph:
             self._set_bindings[binding.key.set_key].append(binding)
         else:
             # Group alternatives by type only (ignore tag for activation purposes)
-            type_key = DIKey(binding.key.target_type, None)
+            type_key = InstanceKey(binding.key.target_type, None)
             self._alternative_bindings[type_key].append(binding)
 
             # If this is the first binding or an untagged binding, also store in main bindings
@@ -76,7 +76,7 @@ class DependencyGraph:
 
         self._validated = False
 
-    def get_binding(self, key: DIKey) -> Binding | None:
+    def get_binding(self, key: InstanceKey) -> Binding | None:
         """Get a binding by key."""
         # First check regular bindings
         binding = self._bindings.get(key)
@@ -91,19 +91,19 @@ class DependencyGraph:
 
         return None
 
-    def get_set_bindings(self, key: DIKey) -> list[Binding]:
+    def get_set_bindings(self, key: InstanceKey) -> list[Binding]:
         """Get all set bindings for a key."""
         return self._set_bindings.get(key, [])
 
-    def get_all_bindings(self) -> dict[DIKey, Binding]:
+    def get_all_bindings(self) -> dict[InstanceKey, Binding]:
         """Get all regular bindings."""
         return self._bindings.copy()
 
-    def get_node(self, key: DIKey) -> GraphNode | None:
+    def get_node(self, key: InstanceKey) -> GraphNode | None:
         """Get a graph node by key."""
         return self._nodes.get(key)
 
-    def get_operations(self) -> dict[DIKey, ExecutableOp]:
+    def get_operations(self) -> dict[InstanceKey, ExecutableOp]:
         """Get all operations."""
         return self._operations.copy()
 
@@ -116,7 +116,7 @@ class DependencyGraph:
             if binding.is_factory:
                 # Create CreateFactory operation for factory bindings
                 # Extract the target type from Factory[T]
-                if isinstance(key, DIKey):  # Factory bindings only work with DIKey, not SetElementKey
+                if isinstance(key, InstanceKey):  # Factory bindings only work with DIKey, not SetElementKey
                     if (
                         hasattr(key.target_type, "__args__")
                         and key.target_type.__args__  # pyright: ignore[reportUnknownMemberType]
@@ -236,10 +236,10 @@ class DependencyGraph:
         GRAY = 1  # Currently being processed
         BLACK = 2  # Completely processed
 
-        colors: dict[DIKey, int] = defaultdict(lambda: WHITE)
-        parent: dict[DIKey, DIKey | None] = {}
+        colors: dict[InstanceKey, int] = defaultdict(lambda: WHITE)
+        parent: dict[InstanceKey, InstanceKey | None] = {}
 
-        def dfs(key: DIKey, path: list[DIKey]) -> None:
+        def dfs(key: InstanceKey, path: list[InstanceKey]) -> None:
             if colors[key] == GRAY:
                 # Found a back edge - circular dependency
                 cycle_start = path.index(key)
@@ -267,12 +267,12 @@ class DependencyGraph:
             if colors[key] == WHITE:
                 dfs(key, [])
 
-    def get_topological_order(self) -> list[DIKey]:
+    def get_topological_order(self) -> list[InstanceKey]:
         """Get a topological ordering of the dependency graph."""
         if not self._validated:
             self.validate()
 
-        in_degree: dict[DIKey, int] = defaultdict(int)
+        in_degree: dict[InstanceKey, int] = defaultdict(int)
 
         # Calculate in-degrees
         for node in self._nodes.values():
@@ -281,12 +281,12 @@ class DependencyGraph:
                     in_degree[dep_key] += 1
 
         # Initialize queue with nodes that have no dependencies
-        queue: deque[DIKey] = deque()
+        queue: deque[InstanceKey] = deque()
         for key in self._nodes:
             if in_degree[key] == 0:
                 queue.append(key)
 
-        result: list[DIKey] = []
+        result: list[InstanceKey] = []
 
         while queue:
             key = queue.popleft()
@@ -316,7 +316,7 @@ class DependencyGraph:
                 filtered_bindings[type_key] = best_binding
                 # Also store it for any specific tagged keys that exist
                 for binding in alternatives:
-                    if isinstance(binding.key, DIKey) and binding.key in self._bindings:
+                    if isinstance(binding.key, InstanceKey) and binding.key in self._bindings:
                         filtered_bindings[binding.key] = best_binding
 
         self._bindings = filtered_bindings
@@ -347,7 +347,7 @@ class DependencyGraph:
         matching_bindings.sort(key=lambda b: len(b.activation_tags or set()), reverse=True)  # pyright: ignore[reportUnknownArgumentType]
         return matching_bindings[0]
 
-    def garbage_collect(self, reachable_keys: set[DIKey]) -> None:
+    def garbage_collect(self, reachable_keys: set[InstanceKey]) -> None:
         """Remove unreachable operations and bindings from the graph."""
         # Filter operations
         filtered_operations = {

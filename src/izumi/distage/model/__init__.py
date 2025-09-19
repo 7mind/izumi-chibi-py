@@ -7,8 +7,8 @@ dependency injection model, organized to avoid circular dependencies.
 
 from .bindings import Binding
 from .graph import DependencyGraph
-from .keys import AbstractDIKey, DIKey, Id, SetElementKey
+from .keys import DIKey, InstanceKey, Id, SetElementKey
 from .operations import CreateFactory, CreateSet, ExecutableOp, Provide
 from .plan import Plan
 
-__all__ = ["AbstractDIKey", "Binding", "DependencyGraph", "DIKey", "SetElementKey", "Id", "Plan", "ExecutableOp", "Provide", "CreateSet", "CreateFactory"]
+__all__ = ["DIKey", "Binding", "DependencyGraph", "InstanceKey", "SetElementKey", "Id", "Plan", "ExecutableOp", "Provide", "CreateSet", "CreateFactory"]

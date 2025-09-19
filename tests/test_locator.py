@@ -248,10 +248,10 @@ class TestLocator(unittest.TestCase):
         self.assertGreater(len(keys), 0)
 
         # Test has_binding() method
-        from izumi.distage.model import DIKey
+        from izumi.distage.model import InstanceKey
 
-        service_a_key = DIKey(ServiceA, None)
-        service_b_key = DIKey(ServiceB, None)
+        service_a_key = InstanceKey(ServiceA, None)
+        service_b_key = InstanceKey(ServiceB, None)
 
         self.assertTrue(plan.has_binding(service_a_key))
         self.assertTrue(plan.has_binding(service_b_key))

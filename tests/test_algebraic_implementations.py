@@ -12,7 +12,7 @@ from izumi.distage.functoid import (
     set_element_functoid,
     value_functoid,
 )
-from izumi.distage.model import DIKey, SetElementKey
+from izumi.distage.model import InstanceKey, SetElementKey
 
 
 class TestAlgebraicImplementations(unittest.TestCase):
@@ -99,8 +99,8 @@ class TestSetElementKey(unittest.TestCase):
 
     def test_set_element_key_creation(self):
         """Test creating SetElementKey."""
-        set_key = DIKey(set[str], None)
-        element_key = DIKey(str, "element-0")
+        set_key = InstanceKey(set[str], None)
+        element_key = InstanceKey(str, "element-0")
 
         set_element_key = SetElementKey(set_key, element_key)
 
@@ -109,8 +109,8 @@ class TestSetElementKey(unittest.TestCase):
 
     def test_set_element_key_string_representation(self):
         """Test SetElementKey string representation."""
-        set_key = DIKey(set[str], None)
-        element_key = DIKey(str, "element-0")
+        set_key = InstanceKey(set[str], None)
+        element_key = InstanceKey(str, "element-0")
         set_element_key = SetElementKey(set_key, element_key)
 
         # The actual string representation depends on how Python represents generic types
@@ -122,9 +122,9 @@ class TestSetElementKey(unittest.TestCase):
 
     def test_set_element_key_hashing(self):
         """Test SetElementKey hashing for dictionary keys."""
-        set_key = DIKey(set[str], None)
-        element_key1 = DIKey(str, "element-0")
-        element_key2 = DIKey(str, "element-1")
+        set_key = InstanceKey(set[str], None)
+        element_key1 = InstanceKey(str, "element-0")
+        element_key2 = InstanceKey(str, "element-1")
 
         key1 = SetElementKey(set_key, element_key1)
         key2 = SetElementKey(set_key, element_key2)
@@ -361,7 +361,7 @@ class TestSetElementKeyIntegration(unittest.TestCase):
         plan = injector.plan(planner_input)
 
         # Check that set bindings contain SetElementKey
-        set_bindings = plan.graph.get_set_bindings(DIKey(set[str], None))
+        set_bindings = plan.graph.get_set_bindings(InstanceKey(set[str], None))
         self.assertEqual(len(set_bindings), 1)
 
         binding = set_bindings[0]

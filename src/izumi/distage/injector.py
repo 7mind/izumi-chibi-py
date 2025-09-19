@@ -10,7 +10,7 @@ from typing import Any, TypeVar
 
 from .locator_base import Locator
 from .logger_injection import AutoLoggerManager
-from .model import DependencyGraph, DIKey, ExecutableOp, Plan
+from .model import DependencyGraph, InstanceKey, ExecutableOp, Plan
 from .planner_input import PlannerInput
 
 T = TypeVar("T")
@@ -91,9 +91,9 @@ class Injector:
         Returns:
             A Locator containing all resolved instances
         """
-        instances: dict[DIKey, Any] = {}
+        instances: dict[InstanceKey, Any] = {}
 
-        def resolve_instance(key: DIKey) -> Any:
+        def resolve_instance(key: InstanceKey) -> Any:
             """Resolve a dependency and return an instance."""
             if plan.has_operation(key):
                 return instances[key]
@@ -150,10 +150,10 @@ class Injector:
 
     def _create_instance(
         self,
-        key: DIKey,
+        key: InstanceKey,
         plan: Plan,
-        instances: dict[DIKey, Any],  # noqa: ARG002
-        resolve_fn: Callable[[DIKey], Any],
+        instances: dict[InstanceKey, Any],  # noqa: ARG002
+        resolve_fn: Callable[[InstanceKey], Any],
     ) -> Any:
         """Create an instance for the given key."""
         # Get operation for this key
@@ -172,7 +172,7 @@ class Injector:
 
         return self._execute_operation(operation, resolve_fn)
 
-    def _execute_operation(self, operation: ExecutableOp, resolve_fn: Callable[[DIKey], Any]) -> Any:
+    def _execute_operation(self, operation: ExecutableOp, resolve_fn: Callable[[InstanceKey], Any]) -> Any:
         """Execute an operation with resolved dependencies."""
         from .model import CreateFactory
 
@@ -183,7 +183,7 @@ class Injector:
             return operation.execute({})
 
         # Build resolved dependencies map for other operations
-        resolved_deps: dict[DIKey, Any] = {}
+        resolved_deps: dict[InstanceKey, Any] = {}
         for dep_key in operation.dependencies():
             try:
                 resolved_deps[dep_key] = resolve_fn(dep_key)

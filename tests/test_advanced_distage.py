@@ -5,7 +5,7 @@ Unit tests for Chibi Izumi advanced features: Roots and Activations.
 
 import unittest
 
-from izumi.distage import Activation, DIKey, Injector, ModuleDef, PlannerInput, Roots, StandardAxis
+from izumi.distage import Activation, InstanceKey, Injector, ModuleDef, PlannerInput, Roots, StandardAxis
 from izumi.distage.activation import Axis, AxisChoiceDef
 
 
@@ -38,8 +38,8 @@ class TestRoots(unittest.TestCase):
         combined = roots1 + roots2
 
         self.assertEqual(len(combined.keys), 2)
-        self.assertIn(DIKey.get(str), combined.keys)
-        self.assertIn(DIKey.get(int), combined.keys)
+        self.assertIn(InstanceKey.get(str), combined.keys)
+        self.assertIn(InstanceKey.get(int), combined.keys)
 
     def test_everything_roots_dominates(self):
         """Test that everything roots dominates in combination."""

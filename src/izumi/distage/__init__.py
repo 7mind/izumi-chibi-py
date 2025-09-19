@@ -20,7 +20,7 @@ from .factory import Factory
 from .functoid import Functoid
 from .injector import Injector
 from .locator_base import Locator
-from .model import Binding, DependencyGraph, DIKey, Id, Plan
+from .model import Binding, DependencyGraph, InstanceKey, Id, Plan
 from .planner_input import PlannerInput
 from .roots import Roots
 from .tag import Tag
@@ -65,7 +65,7 @@ __all__ = [
     "Binding",
     "DependencyGraph",
     "Roots",
-    "DIKey",
+    "InstanceKey",
     "Id",
     "Activation",
     "StandardAxis",

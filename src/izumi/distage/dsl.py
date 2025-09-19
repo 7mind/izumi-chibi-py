@@ -15,7 +15,7 @@ from .functoid import (
     set_element_functoid,
     value_functoid,
 )
-from .model import Binding, DIKey, SetElementKey
+from .model import Binding, InstanceKey, SetElementKey
 from .tag import Tag
 
 T = TypeVar("T")
@@ -74,7 +74,7 @@ class BindingBuilder[T]:
         """Create a UsingBuilder for fluent binding configuration."""
 
         def finalize_binding(functoid: Functoid[T]) -> None:
-            key = DIKey(self._target_type, self._name)
+            key = InstanceKey(self._target_type, self._name)
 
             # Convert tag to activation_tags if it's an AxisChoiceDef
             activation_tags: set[Any] = set()
@@ -121,8 +121,8 @@ class SetBindingBuilder[T]:
 
     def add_value(self, instance: T) -> SetBindingBuilder[T]:
         """Add a value instance to the set."""
-        set_key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
-        element_key = DIKey(self._target_type, self._generate_element_name())
+        set_key = InstanceKey(set[self._target_type], None)  # type: ignore[name-defined]
+        element_key = InstanceKey(self._target_type, self._generate_element_name())
         key = SetElementKey(set_key, element_key)
         functoid = set_element_functoid(value_functoid(instance))
         binding = Binding(key, functoid)
@@ -131,8 +131,8 @@ class SetBindingBuilder[T]:
 
     def add_type(self, cls: type[T]) -> SetBindingBuilder[T]:
         """Add a class type to the set (will be instantiated)."""
-        set_key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
-        element_key = DIKey(self._target_type, self._generate_element_name())
+        set_key = InstanceKey(set[self._target_type], None)  # type: ignore[name-defined]
+        element_key = InstanceKey(self._target_type, self._generate_element_name())
         key = SetElementKey(set_key, element_key)
         functoid = set_element_functoid(class_functoid(cls))
         binding = Binding(key, functoid)
@@ -141,8 +141,8 @@ class SetBindingBuilder[T]:
 
     def add_func(self, factory: Callable[..., T]) -> SetBindingBuilder[T]:
         """Add a factory function to the set."""
-        set_key = DIKey(set[self._target_type], None)  # type: ignore[name-defined]
-        element_key = DIKey(self._target_type, self._generate_element_name())
+        set_key = InstanceKey(set[self._target_type], None)  # type: ignore[name-defined]
+        element_key = InstanceKey(self._target_type, self._generate_element_name())
         key = SetElementKey(set_key, element_key)
         functoid = set_element_functoid(function_functoid(factory))
         binding = Binding(key, functoid)

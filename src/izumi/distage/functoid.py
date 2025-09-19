@@ -11,7 +11,7 @@ from collections.abc import Callable
 from typing import Any, TypeVar
 
 from .introspection import SignatureIntrospector
-from .model import DIKey
+from .model import InstanceKey
 
 T = TypeVar("T")
 
@@ -28,7 +28,7 @@ class Functoid[T]:
 
     def __init__(
         self,
-        keys_fn: Callable[[], list[DIKey]],
+        keys_fn: Callable[[], list[InstanceKey]],
         sig_fn: Callable[[], list[Any]],  # Returns list[DependencyInfo]
         call_fn: Callable[..., T],
         name: str | None = None,
@@ -57,7 +57,7 @@ class Functoid[T]:
         self.original_func = original_func
         self.original_target_type = original_target_type
 
-    def keys(self) -> list[DIKey]:
+    def keys(self) -> list[InstanceKey]:
         """Return a list of DIKey dependencies that this functoid requires."""
         return self._keys_fn()
 

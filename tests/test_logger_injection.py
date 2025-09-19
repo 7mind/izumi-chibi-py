@@ -72,18 +72,18 @@ class TestAutoLoggerManager(unittest.TestCase):
 
     def test_should_auto_inject_logger(self):
         """Test logger auto-injection detection."""
-        from izumi.distage.model import DIKey
+        from izumi.distage.model import InstanceKey
 
         # Should auto-inject for unnamed Logger
-        logger_key_unnamed = DIKey(logging.Logger, None)
+        logger_key_unnamed = InstanceKey(logging.Logger, None)
         self.assertTrue(AutoLoggerManager.should_auto_inject_logger(logger_key_unnamed))
 
         # Should NOT auto-inject for named Logger
-        logger_key_named = DIKey(logging.Logger, "my-logger")
+        logger_key_named = InstanceKey(logging.Logger, "my-logger")
         self.assertFalse(AutoLoggerManager.should_auto_inject_logger(logger_key_named))
 
         # Should NOT auto-inject for other types
-        str_key = DIKey(str, None)
+        str_key = InstanceKey(str, None)
         self.assertFalse(AutoLoggerManager.should_auto_inject_logger(str_key))
 
     def test_create_logger_factory(self):
@@ -99,9 +99,9 @@ class TestAutoLoggerManager(unittest.TestCase):
         binding = AutoLoggerManager.create_logger_binding("test.location")
 
         # Check that binding key is correct
-        from izumi.distage.model import DIKey
+        from izumi.distage.model import InstanceKey
 
-        expected_key = DIKey(logging.Logger, "__logger__.test.location")
+        expected_key = InstanceKey(logging.Logger, "__logger__.test.location")
         self.assertEqual(binding.key, expected_key)
 
         # Check that binding creates the right logger
@@ -113,12 +113,12 @@ class TestAutoLoggerManager(unittest.TestCase):
 
     def test_rewrite_logger_key(self):
         """Test logger key rewriting."""
-        from izumi.distage.model import DIKey
+        from izumi.distage.model import InstanceKey
 
-        original_key = DIKey(logging.Logger, None)
+        original_key = InstanceKey(logging.Logger, None)
         rewritten_key = AutoLoggerManager.rewrite_logger_key(original_key, "test.location")
 
-        expected_key = DIKey(logging.Logger, "__logger__.test.location")
+        expected_key = InstanceKey(logging.Logger, "__logger__.test.location")
         self.assertEqual(rewritten_key, expected_key)
 
 

@@ -10,7 +10,7 @@ from typing import TypeVar
 from ..activation import Activation
 from ..roots import Roots
 from .graph import DependencyGraph
-from .keys import DIKey
+from .keys import InstanceKey
 
 T = TypeVar("T")
 
@@ -31,7 +31,7 @@ class Plan:
     graph: DependencyGraph
     roots: Roots
     activation: Activation
-    topology: list[DIKey]
+    topology: list[InstanceKey]
 
     def __post_init__(self) -> None:
         """Ensure the plan is validated."""
@@ -73,19 +73,19 @@ class Plan:
         """
         return len(self.graph.get_operations()) == 0
 
-    def keys(self) -> set[DIKey]:
+    def keys(self) -> set[InstanceKey]:
         """Get all available keys in this plan."""
         return set(self.graph.get_operations().keys())
 
-    def has_operation(self, key: DIKey) -> bool:
+    def has_operation(self, key: InstanceKey) -> bool:
         """Check if an operation exists for the given key."""
         return key in self.graph.get_operations()
 
-    def has_binding(self, key: DIKey) -> bool:
+    def has_binding(self, key: InstanceKey) -> bool:
         """Check if a binding exists for the given key."""
         return self.graph.get_binding(key) is not None
 
-    def get_execution_order(self) -> list[DIKey]:
+    def get_execution_order(self) -> list[InstanceKey]:
         """Get the topological order for execution."""
         copy = self.topology.copy()
         copy.reverse()

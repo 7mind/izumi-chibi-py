@@ -13,7 +13,7 @@ from types import FrameType
 from typing import Any
 
 from .functoid import function_functoid
-from .model import Binding, DIKey
+from .model import Binding, InstanceKey
 
 
 class LoggerLocationIntrospector:
@@ -188,7 +188,7 @@ class AutoLoggerManager:
         factory = AutoLoggerManager.create_logger_factory(location_name)
 
         # Create the binding key for the named logger
-        logger_key = DIKey(logging.Logger, logger_name)
+        logger_key = InstanceKey(logging.Logger, logger_name)
 
         # Create the functoid
         functoid = function_functoid(factory)
@@ -197,7 +197,7 @@ class AutoLoggerManager:
         return Binding(logger_key, functoid)
 
     @staticmethod
-    def should_auto_inject_logger(key: DIKey) -> bool:
+    def should_auto_inject_logger(key: InstanceKey) -> bool:
         """
         Check if a dependency key should trigger automatic logger injection.
 
@@ -213,7 +213,7 @@ class AutoLoggerManager:
         )
 
     @staticmethod
-    def rewrite_logger_key(original_key: DIKey, location_name: str) -> DIKey:  # noqa: ARG004
+    def rewrite_logger_key(original_key: InstanceKey, location_name: str) -> InstanceKey:  # noqa: ARG004
         """
         Rewrite a logger dependency key to point to the auto-generated logger.
 
@@ -225,4 +225,4 @@ class AutoLoggerManager:
             A new DIKey pointing to the location-specific logger
         """
         logger_name = f"__logger__.{location_name}"
-        return DIKey(logging.Logger, logger_name)
+        return InstanceKey(logging.Logger, logger_name)

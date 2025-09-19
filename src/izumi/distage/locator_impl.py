@@ -9,7 +9,7 @@ from typing import Any, TypeVar
 
 from .locator_base import Locator
 from .logger_injection import AutoLoggerManager
-from .model import DIKey, Plan
+from .model import InstanceKey, Plan
 
 T = TypeVar("T")
 
@@ -28,7 +28,7 @@ class LocatorImpl(Locator):
     def __init__(
         self,
         plan: Plan,
-        instances: dict[DIKey, object],
+        instances: dict[InstanceKey, object],
         parent: Locator,
     ):
         """
@@ -40,14 +40,14 @@ class LocatorImpl(Locator):
             parent: Parent locator for dependency inheritance
         """
         self._plan = plan
-        self._instances: dict[DIKey, object] = instances or {}
+        self._instances: dict[InstanceKey, object] = instances or {}
         self._parent = parent
 
-    def has_key_locally(self, key: DIKey) -> bool:
+    def has_key_locally(self, key: InstanceKey) -> bool:
         """Check if this locator has the key in its local instances."""
         return key in self._instances
 
-    def has_key(self, key: DIKey) -> bool:
+    def has_key(self, key: InstanceKey) -> bool:
         """Check if this locator (or its parent chain) has the key."""
         return self.has_key_locally(key) or self._parent.has_key(key)
 
@@ -69,7 +69,7 @@ class LocatorImpl(Locator):
         Raises:
             ValueError: If no binding exists for the requested type
         """
-        key = DIKey(target_type, name)
+        key = InstanceKey(target_type, name)
 
         if key not in self._instances:
             # Try to resolve it on-demand
@@ -117,7 +117,7 @@ class LocatorImpl(Locator):
         Returns:
             True if the type can be resolved, False otherwise
         """
-        key = DIKey(target_type, name)
+        key = InstanceKey(target_type, name)
 
         # Check if already resolved
         if key in self._instances:
@@ -193,16 +193,3 @@ class LocatorImpl(Locator):
     def has_parent(self) -> bool:
         """Check if this locator has a parent."""
         return not self._parent.is_empty()
-
-    def create_child(self, plan: Plan, instances: dict[DIKey, object] | None = None) -> Locator:
-        """
-        Create a child locator with this locator as parent.
-
-        Args:
-            plan: The plan for the child locator
-            instances: Optional initial instances
-
-        Returns:
-            A new child locator
-        """
-        return LocatorImpl(plan, instances or {}, self)

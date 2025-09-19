@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from .keys import DIKey, SetElementKey
+from .keys import InstanceKey, SetElementKey
 
 if TYPE_CHECKING:
     from .bindings import Binding
@@ -22,15 +22,15 @@ class ExecutableOp(ABC):
     """Base class for executable operations in the dependency injection system."""
 
     @abstractmethod
-    def key(self) -> DIKey:
+    def key(self) -> InstanceKey:
         """Get the DIKey this operation produces."""
 
     @abstractmethod
-    def dependencies(self) -> list[DIKey]:
+    def dependencies(self) -> list[InstanceKey]:
         """Get the dependencies this operation requires."""
 
     @abstractmethod
-    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:  # noqa: ARG002
+    def execute(self, resolved_deps: dict[InstanceKey, Any]) -> Any:  # noqa: ARG002
         """Execute the operation with resolved dependencies."""
 
 
@@ -40,17 +40,17 @@ class Provide(ExecutableOp):
 
     binding: Binding
 
-    def key(self) -> DIKey:
+    def key(self) -> InstanceKey:
         """Get the DIKey this operation produces."""
         if isinstance(self.binding.key, SetElementKey):
             return self.binding.key.element_key
         return self.binding.key
 
-    def dependencies(self) -> list[DIKey]:
+    def dependencies(self) -> list[InstanceKey]:
         """Get the dependencies this operation requires."""
         return self.binding.functoid.keys()
 
-    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:  # noqa: ARG002
+    def execute(self, resolved_deps: dict[InstanceKey, Any]) -> Any:  # noqa: ARG002
         """Execute the binding with resolved dependencies."""
         dependencies = self.binding.functoid.sig()
         resolved_args: list[Any] = []
@@ -65,7 +65,7 @@ class Provide(ExecutableOp):
                 and not isinstance(dep.type_hint, str)
             ):
                 # Handle both regular types and generic types (like set[T]), but skip string forward references
-                dep_key = DIKey(dep.type_hint, dep.dependency_name)
+                dep_key = InstanceKey(dep.type_hint, dep.dependency_name)
                 resolved_args.append(resolved_deps[dep_key])
             # For optional dependencies with defaults, let the functoid handle them
 
@@ -76,22 +76,22 @@ class Provide(ExecutableOp):
 class CreateFactory(ExecutableOp):
     """Operation that creates a Factory instance for assisted injection."""
 
-    factory_key: DIKey
+    factory_key: InstanceKey
     target_type: type
     binding: Binding
     resolve_fn: Any = None  # Will be set during execution
 
-    def key(self) -> DIKey:
+    def key(self) -> InstanceKey:
         """Get the DIKey this operation produces."""
         return self.factory_key
 
-    def dependencies(self) -> list[DIKey]:
+    def dependencies(self) -> list[InstanceKey]:
         """Get the dependencies this operation requires."""
         # For factory operations, we only require dependencies that can be resolved from the container
         # Dependencies for assisted injection are handled at factory.create() time
         return []  # Factory operations should not require any upfront dependencies
 
-    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:  # noqa: ARG002
+    def execute(self, resolved_deps: dict[InstanceKey, Any]) -> Any:  # noqa: ARG002
         """Execute by creating a Factory instance."""
         from ..factory import Factory
 
@@ -101,7 +101,7 @@ class CreateFactory(ExecutableOp):
                 self._resolve_fn = resolve_fn
 
             def get(self, target_type: type, name: str | None = None) -> Any:  # noqa: A002
-                key = DIKey(target_type, name)
+                key = InstanceKey(target_type, name)
                 return self._resolve_fn(key)
 
         # Use the resolve function provided during execution
@@ -113,18 +113,18 @@ class CreateFactory(ExecutableOp):
 class CreateSet(ExecutableOp):
     """Operation that creates a set by collecting all set element bindings."""
 
-    set_key: DIKey
-    element_keys: list[DIKey]
+    set_key: InstanceKey
+    element_keys: list[InstanceKey]
 
-    def key(self) -> DIKey:
+    def key(self) -> InstanceKey:
         """Get the DIKey this operation produces."""
         return self.set_key
 
-    def dependencies(self) -> list[DIKey]:
+    def dependencies(self) -> list[InstanceKey]:
         """Get the dependencies this operation requires."""
         return self.element_keys
 
-    def execute(self, resolved_deps: dict[DIKey, Any]) -> Any:  # noqa: ARG002
+    def execute(self, resolved_deps: dict[InstanceKey, Any]) -> Any:  # noqa: ARG002
         """Execute by collecting all resolved set elements."""
         elements = set()
         for element_key in self.element_keys:
