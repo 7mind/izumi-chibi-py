@@ -11,6 +11,12 @@ The port was done by guiding Claude with thorough manual reviews.
 
 At this point the project is not battle-tested. Expect dragons, landmines and varying mileage.
 
+## Other generic DI implementations for Python
+
+1. [dishka](https://github.com/reagento/dishka) - staged dependency injection, no explicit support for configurability (axes)
+2. [dependency_injector](https://pypi.org/project/dependency-injector/) - single-pass, no explicit support for configurability (axes)
+3. [inject](https://pypi.org/project/inject/) - invasive, based on decorators, single-pass, no explicit support for configurability (axes)
+
 ## Features
 
 `distage` provides a powerful, type-safe dependency injection framework with:
