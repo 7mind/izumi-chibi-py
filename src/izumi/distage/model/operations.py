@@ -152,3 +152,33 @@ class CreateSet(ExecutableOp):
             if element_key in resolved_deps:
                 elements.add(resolved_deps[element_key])
         return elements
+
+
+@dataclass
+class CreateSubcontext(ExecutableOp):
+    """Operation that creates a Subcontext for dynamically resolved dependencies."""
+
+    subcontext_key: InstanceKey
+    target_key: InstanceKey  # The key for the main component the subcontext creates
+    submodule_bindings: list[Binding]
+    local_dependency_keys: list[InstanceKey]  # Dependencies that will be provided at runtime
+    parent_dependencies: list[InstanceKey]  # Dependencies from the parent context
+
+    def key(self) -> InstanceKey:
+        """Get the DIKey this operation produces."""
+        return self.subcontext_key
+
+    def dependencies(self) -> list[InstanceKey]:
+        """Get the dependencies this operation requires from the parent context."""
+        return self.parent_dependencies
+
+    def execute(self, resolved_deps: dict[InstanceKey, Any]) -> Any:
+        """Execute by creating a Subcontext instance."""
+        from ..subcontext import Subcontext
+
+        return Subcontext(
+            target_key=self.target_key,
+            submodule_bindings=self.submodule_bindings,
+            local_dependency_keys=self.local_dependency_keys,
+            parent_resolved_deps=resolved_deps,
+        )

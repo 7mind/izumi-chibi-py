@@ -79,15 +79,15 @@ class DependencyGraph:
 
         self._validated = False
 
-    def add_lookup_operation(self, lookup_op: Lookup) -> None:
-        """Add a lookup operation directly to the graph."""
-        # Directly add the lookup operation to the operations
-        self._operations[lookup_op.key()] = lookup_op
+    def add_lookup_operation(self, operation: ExecutableOp) -> None:
+        """Add a lookup operation or other executable operation directly to the graph."""
+        # Directly add the operation to the operations
+        self._operations[operation.key()] = operation
 
-        # If this lookup operation is for a set element, track it
-        if lookup_op.set_key is not None:
-            self._set_lookup_operations[lookup_op.set_key].append(lookup_op)
-            self._all_set_keys.add(lookup_op.set_key)
+        # If this is a Lookup operation for a set element, track it
+        if isinstance(operation, Lookup) and operation.set_key is not None:
+            self._set_lookup_operations[operation.set_key].append(operation)
+            self._all_set_keys.add(operation.set_key)
 
         self._validated = False
 
@@ -124,12 +124,16 @@ class DependencyGraph:
 
     def generate_operations(self) -> None:
         """Generate operations from bindings."""
-        # Preserve any lookup operations that were added directly
-        existing_lookup_operations = {
-            key: op for key, op in self._operations.items() if isinstance(op, Lookup)
+        # Preserve any lookup operations and subcontext operations that were added directly
+        from .operations import CreateSubcontext
+
+        existing_operations = {
+            key: op
+            for key, op in self._operations.items()
+            if isinstance(op, (Lookup, CreateSubcontext))
         }
         self._operations.clear()
-        self._operations.update(existing_lookup_operations)
+        self._operations.update(existing_operations)
 
         # Filter weak references before generating operations
         self._filter_weak_references()

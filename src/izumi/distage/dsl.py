@@ -58,6 +58,10 @@ class ModuleDef:
         """Create a set binding builder for the given type."""
         return SetBindingBuilder(target_type, self)
 
+    def makeSubcontext(self, target_type: type[T]) -> SubcontextBuilder[T]:
+        """Create a subcontext builder for the given type."""
+        return SubcontextBuilder(target_type, self)
+
 
 class BindingBuilder[T]:
     """Builder for creating bindings."""
@@ -271,3 +275,104 @@ class UsingBuilder[T]:
         """Bind to a Factory[T] that creates instances using a factory function on-demand."""
         functoid: Functoid[T] = function_functoid(factory_function)
         self._finalize_callback(functoid)
+
+
+class SubcontextBuilder[T]:
+    """Builder for creating subcontext bindings."""
+
+    def __init__(self, target_type: type[T], module: ModuleDef):
+        self._target_type = target_type
+        self._module = module
+        self._name: str | None = None
+        self._submodule: ModuleDef | None = None
+        self._local_dependency_keys: list[InstanceKey] = []
+        self._finalized = False
+
+    def named(self, name: str) -> SubcontextBuilder[T]:
+        """Add a name to this subcontext binding."""
+        self._name = name
+        return self
+
+    def withSubmodule(self, submodule: ModuleDef) -> SubcontextBuilder[T]:
+        """Add a submodule with additional bindings for this subcontext."""
+        self._submodule = submodule
+        return self
+
+    def localDependency(
+        self, dependency_type: type, name: str | None = None
+    ) -> SubcontextBuilder[T]:
+        """Declare a local dependency that will be provided at runtime."""
+        dependency_key = InstanceKey(dependency_type, name)
+        self._local_dependency_keys.append(dependency_key)
+        return self
+
+    def __enter__(self) -> SubcontextBuilder[T]:
+        """Support context manager syntax for finalizing the subcontext."""
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Finalize the subcontext binding when exiting context manager."""
+        self._finalize()
+
+    def __del__(self) -> None:
+        """Auto-finalize when the builder is garbage collected."""
+        if not self._finalized:
+            self._finalize()
+
+    def _finalize(self) -> None:
+        """Finalize the subcontext binding."""
+        if self._finalized:
+            return
+
+        from .subcontext import Subcontext
+
+        # Create the subcontext key
+        subcontext_key = InstanceKey(Subcontext, self._name)
+        target_key = InstanceKey(self._target_type, None)
+
+        # Get submodule bindings
+        submodule_bindings = self._submodule.bindings if self._submodule else []
+
+        # Determine parent dependencies by analyzing the submodule
+        parent_dependencies: list[InstanceKey] = []
+        if self._submodule:
+            # Find all dependencies of the submodule that are not local dependencies
+            # and are not satisfied within the submodule itself
+            from .model.graph import DependencyGraph
+
+            temp_graph = DependencyGraph()
+            for binding in submodule_bindings:
+                temp_graph.add_binding(binding)
+
+            temp_graph.generate_operations()
+            all_deps: set[InstanceKey] = set()
+            operations = temp_graph.get_operations()
+
+            # Get all keys that are provided by the submodule
+            submodule_provided_keys = set(operations.keys())
+
+            for operation in operations.values():
+                all_deps.update(operation.dependencies())
+
+            local_dep_set = set(self._local_dependency_keys)
+            # Parent dependencies are those that are needed but not provided by submodule or local deps
+            parent_dependencies = [
+                dep
+                for dep in all_deps
+                if dep not in local_dep_set and dep not in submodule_provided_keys
+            ]
+
+        # Create the CreateSubcontext operation
+        from .model.operations import CreateSubcontext
+
+        create_subcontext_op = CreateSubcontext(
+            subcontext_key=subcontext_key,
+            target_key=target_key,
+            submodule_bindings=submodule_bindings,
+            local_dependency_keys=self._local_dependency_keys,
+            parent_dependencies=parent_dependencies,
+        )
+
+        # Add the operation to the module
+        self._module.add_lookup_operation(create_subcontext_op)
+        self._finalized = True

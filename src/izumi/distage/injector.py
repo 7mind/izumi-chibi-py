@@ -41,19 +41,39 @@ class Injector:
 
         self._parent_locator = parent_locator if parent_locator is not None else Locator.empty()
 
-    def plan(self, input: PlannerInput) -> Plan:
+    def plan(self, input: PlannerInput | list[InstanceKey], *args: Any) -> Plan:
         """
-        Create a validated Plan from a PlannerInput.
+        Create a validated Plan from a PlannerInput or convenience parameters.
 
         Args:
-            input: The PlannerInput containing modules, roots, and activation
+            input: The PlannerInput containing modules, roots, and activation,
+                   OR a list of root keys when using the convenience overload
+            *args: When using convenience overload: modules (optional)
 
         Returns:
             A Plan that can be executed by Locators
         """
-        graph = self._build_graph(input)
-        topology = graph.get_topological_order()
-        return Plan(graph, input.roots, input.activation, topology)
+        if isinstance(input, list):
+            # Convenience overload: plan(keys, module)
+            from .dsl import ModuleDef
+            from .roots import Roots
+
+            keys = input
+            modules = [args[0]] if args else [ModuleDef()]
+            if keys:
+                # Extract types from InstanceKeys
+                target_types = [key.target_type for key in keys]
+                roots = Roots.target(*target_types)
+            else:
+                roots = Roots.everything()
+
+            planner_input = PlannerInput(modules, roots)
+            return self.plan(planner_input)
+        else:
+            # Normal usage: plan(PlannerInput)
+            graph = self._build_graph(input)
+            topology = graph.get_topological_order()
+            return Plan(graph, input.roots, input.activation, topology)
 
     def produce_run(self, input: PlannerInput, func: Callable[..., T]) -> T:
         """
@@ -210,6 +230,44 @@ class Injector:
                     raise
 
         return operation.execute(resolved_deps)
+
+    def create_locator_with_preresolved(
+        self, plan: Plan, preresolved_deps: dict[InstanceKey, Any]
+    ) -> Locator:
+        """
+        Create a Locator with some dependencies already resolved.
+
+        Args:
+            plan: The validated Plan to execute
+            preresolved_deps: Dependencies that are already resolved
+
+        Returns:
+            A Locator containing all resolved instances
+        """
+        instances: dict[InstanceKey, Any] = preresolved_deps.copy()
+
+        def resolve_instance(key: InstanceKey) -> Any:
+            """Resolve a dependency and return an instance."""
+            if key in instances:
+                return instances[key]
+            elif plan.has_operation(key):
+                # This should have been resolved already in topological order
+                return instances[key]
+            else:
+                return self._parent_locator.get(key)  # pyright: ignore[reportUnknownVariableType]
+
+        # Resolve all dependencies in topological order (skip already resolved ones)
+        instances_dict: dict[DIKey, Any] = instances  # type: ignore[assignment]
+        for binding_key in plan.get_execution_order():
+            if binding_key not in instances_dict:
+                instance = self._create_instance(
+                    binding_key, plan, instances_dict, resolve_instance
+                )
+                instances_dict[binding_key] = instance
+
+        from .locator_impl import LocatorImpl
+
+        return LocatorImpl(plan, instances_dict, self._parent_locator)
 
     @classmethod
     def inherit(cls, parent_locator: Locator) -> Injector:

@@ -840,5 +840,263 @@ class TestAliasedFunctionality(unittest.TestCase):
         self.assertEqual(service_named.name, "implementation")
 
 
+class TestSubcontextFunctionality(unittest.TestCase):
+    """Test cases for Subcontext functionality."""
+
+    def test_basic_subcontext_creation(self):
+        """Test basic subcontext creation and usage."""
+        from izumi.distage import Injector, ModuleDef, PlannerInput, Subcontext
+
+        class RequestId:
+            def __init__(self, value: str):
+                self.value = value
+
+        class Service:
+            def __init__(self, request_id: RequestId):
+                self.request_id = request_id
+
+            def process(self) -> str:
+                return f"Processing request {self.request_id.value}"
+
+        # Create submodule
+        submodule = ModuleDef()
+        submodule.make(Service).using().type(Service)
+
+        # Main module with subcontext
+        module = ModuleDef()
+        builder = module.makeSubcontext(Service).withSubmodule(submodule).localDependency(RequestId)
+        del builder  # Force finalization
+
+        # Create injector and get subcontext
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        subcontext = locator.get(DIKey.of(Subcontext))
+        self.assertIsInstance(subcontext, Subcontext)
+
+        # Provide local dependency and run
+        request_id = RequestId("test-123")
+        result = subcontext.provide_value(request_id).produce_run(lambda service: service.process())
+
+        self.assertEqual(result, "Processing request test-123")
+
+    def test_subcontext_with_named_dependency(self):
+        """Test subcontext with named local dependency."""
+        from izumi.distage import Injector, InstanceKey, ModuleDef, PlannerInput, Subcontext
+
+        class Config:
+            def __init__(self, value: str):
+                self.value = value
+
+        class Service:
+            def __init__(self, config: Config):
+                self.config = config
+
+            def get_value(self) -> str:
+                return self.config.value
+
+        # Create submodule
+        submodule = ModuleDef()
+        submodule.make(Service).using().type(Service)
+
+        # Main module with named subcontext
+        module = ModuleDef()
+        builder = (
+            module.makeSubcontext(Service)
+            .named("service-subcontext")
+            .withSubmodule(submodule)
+            .localDependency(Config)
+        )
+        del builder  # Force finalization
+
+        # Create injector and get named subcontext
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        subcontext = locator.get(DIKey.of(Subcontext, "service-subcontext"))
+        self.assertIsInstance(subcontext, Subcontext)
+
+        # Provide config and run
+        config = Config("test-value")
+        result = subcontext.provide(InstanceKey(Config, None), config).produce_run(
+            lambda service: service.get_value()
+        )
+
+        self.assertEqual(result, "test-value")
+
+    def test_subcontext_multiple_local_dependencies(self):
+        """Test subcontext with multiple local dependencies."""
+        from izumi.distage import Injector, ModuleDef, PlannerInput, Subcontext
+
+        class UserId:
+            def __init__(self, value: str):
+                self.value = value
+
+        class SessionId:
+            def __init__(self, value: str):
+                self.value = value
+
+        class AuditLogger:
+            def __init__(self, user_id: UserId, session_id: SessionId):
+                self.user_id = user_id
+                self.session_id = session_id
+
+            def log(self, action: str) -> str:
+                return f"User {self.user_id.value} in session {self.session_id.value} performed: {action}"
+
+        # Create submodule
+        submodule = ModuleDef()
+        submodule.make(AuditLogger).using().type(AuditLogger)
+
+        # Main module with multiple local dependencies
+        module = ModuleDef()
+        builder = (
+            module.makeSubcontext(AuditLogger)
+            .withSubmodule(submodule)
+            .localDependency(UserId)
+            .localDependency(SessionId)
+        )
+        del builder  # Force finalization
+
+        # Create injector and get subcontext
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        subcontext = locator.get(DIKey.of(Subcontext))
+        self.assertIsInstance(subcontext, Subcontext)
+
+        # Provide both dependencies and run
+        user_id = UserId("alice")
+        session_id = SessionId("sess-789")
+
+        result = (
+            subcontext.provide_value(user_id)
+            .provide_value(session_id)
+            .produce_run(lambda logger: logger.log("login"))
+        )
+
+        self.assertEqual(result, "User alice in session sess-789 performed: login")
+
+    def test_subcontext_missing_local_dependency_error(self):
+        """Test that missing local dependencies cause proper errors."""
+        from izumi.distage import Injector, ModuleDef, PlannerInput, Subcontext
+
+        class Config:
+            def __init__(self, value: str):
+                self.value = value
+
+        class Service:
+            def __init__(self, config: Config):
+                self.config = config
+
+        # Create submodule
+        submodule = ModuleDef()
+        submodule.make(Service).using().type(Service)
+
+        # Main module with subcontext
+        module = ModuleDef()
+        builder = module.makeSubcontext(Service).withSubmodule(submodule).localDependency(Config)
+        del builder  # Force finalization
+
+        # Create injector and get subcontext
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        subcontext = locator.get(DIKey.of(Subcontext))
+
+        # Try to run without providing local dependency
+        with self.assertRaises(ValueError) as cm:
+            subcontext.produce_run(lambda service: service.config.value)
+
+        self.assertIn("Missing local dependencies", str(cm.exception))
+
+    def test_subcontext_produce_method(self):
+        """Test the produce() method that returns the component directly."""
+        from izumi.distage import Injector, ModuleDef, PlannerInput, Subcontext
+
+        class Token:
+            def __init__(self, value: str):
+                self.value = value
+
+        class AuthService:
+            def __init__(self, token: Token):
+                self.token = token
+
+        # Create submodule
+        submodule = ModuleDef()
+        submodule.make(AuthService).using().type(AuthService)
+
+        # Main module with subcontext
+        module = ModuleDef()
+        builder = module.makeSubcontext(AuthService).withSubmodule(submodule).localDependency(Token)
+        del builder  # Force finalization
+
+        # Create injector and get subcontext
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        subcontext = locator.get(DIKey.of(Subcontext))
+
+        # Provide local dependency and get component directly
+        token = Token("jwt-123")
+        auth_service = subcontext.provide_value(token).produce()
+
+        self.assertIsInstance(auth_service, AuthService)
+        self.assertEqual(auth_service.token.value, "jwt-123")
+
+    def test_subcontext_with_parent_dependencies(self):
+        """Test subcontext that depends on parent context dependencies."""
+        from izumi.distage import Injector, ModuleDef, PlannerInput, Subcontext
+
+        class Database:
+            def __init__(self):
+                self.connection = "db-connection"
+
+        class RequestId:
+            def __init__(self, value: str):
+                self.value = value
+
+        class Repository:
+            def __init__(self, database: Database, request_id: RequestId):
+                self.database = database
+                self.request_id = request_id
+
+            def save(self, data: str) -> str:
+                return f"Saved '{data}' to {self.database.connection} with request {self.request_id.value}"
+
+        # Create submodule that depends on parent Database
+        submodule = ModuleDef()
+        submodule.make(Repository).using().type(Repository)
+
+        # Main module with parent dependency and subcontext
+        module = ModuleDef()
+        module.make(Database).using().type(Database)
+        builder = (
+            module.makeSubcontext(Repository).withSubmodule(submodule).localDependency(RequestId)
+        )
+        del builder  # Force finalization
+
+        # Create injector and get subcontext
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        locator = injector.produce(injector.plan(planner_input))
+
+        subcontext = locator.get(DIKey.of(Subcontext))
+        self.assertIsInstance(subcontext, Subcontext)
+
+        # Provide local dependency and run
+        request_id = RequestId("req-999")
+        result = subcontext.provide_value(request_id).produce_run(
+            lambda repo: repo.save("user-data")
+        )
+
+        self.assertEqual(result, "Saved 'user-data' to db-connection with request req-999")
+
+
 if __name__ == "__main__":
     unittest.main()

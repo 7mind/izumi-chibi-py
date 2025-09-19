@@ -23,6 +23,7 @@ from .locator_base import Locator
 from .model import Binding, DependencyGraph, Id, InstanceKey, Plan
 from .planner_input import PlannerInput
 from .roots import Roots
+from .subcontext import Subcontext
 from .tag import Tag
 
 # Configure beartype to throw errors for type violations
@@ -72,4 +73,5 @@ __all__ = [
     "AxisChoiceDef",
     "Factory",
     "Functoid",
+    "Subcontext",
 ]
