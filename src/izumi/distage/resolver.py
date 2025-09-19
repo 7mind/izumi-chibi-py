@@ -124,7 +124,10 @@ class DependencyResolver:
 
     def _instantiate_class(self, cls: type | Any | Callable[..., Any]) -> Any:
         """Instantiate a class by resolving its dependencies."""
-        dependencies = SignatureIntrospector.extract_dependencies(cls)
+        if inspect.isclass(cls):
+            dependencies = SignatureIntrospector.extract_from_class(cls)
+        else:
+            dependencies = SignatureIntrospector.extract_from_callable(cls)
         kwargs = {}
 
         for dep in dependencies:
@@ -145,7 +148,7 @@ class DependencyResolver:
 
     def _call_factory(self, factory: Callable[..., Any]) -> Any:
         """Call a factory function by resolving its dependencies."""
-        dependencies = SignatureIntrospector.extract_dependencies(factory)
+        dependencies = SignatureIntrospector.extract_from_callable(factory)
         kwargs = {}
 
         for dep in dependencies:

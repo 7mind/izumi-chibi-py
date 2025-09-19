@@ -178,7 +178,7 @@ from typing import Annotated
 from izumi.distage import Factory, Id, ModuleDef, Injector, PlannerInput
 
 class Database:
-    def __init__(self, connection_string: str):
+    def __init__(self, connection_string: Annotated[str, Id("db-url")]):
         self.connection_string = connection_string
 
 class UserSession:
@@ -188,7 +188,7 @@ class UserSession:
         self.api_key = api_key
 
 module = ModuleDef()
-module.make(str).using().value("postgresql://prod:5432/app")
+module.make(str).named("db-url").using().value("postgresql://prod:5432/app")
 module.make(Database).using().type(Database)
 module.make(Factory[UserSession]).using().factory_type(UserSession)
 

@@ -188,7 +188,7 @@ class Locator:
         from .introspection import SignatureIntrospector
 
         # Extract dependencies from the function signature
-        dependencies = SignatureIntrospector.extract_dependencies(func)
+        dependencies = SignatureIntrospector.extract_from_callable(func)
         kwargs = {}
 
         # Resolve each dependency from the locator

@@ -178,7 +178,7 @@ class TestSignatureIntrospection(unittest.TestCase):
             def __init__(self, database: str, config: int):
                 pass
 
-        deps = SignatureIntrospector.extract_dependencies(Service)
+        deps = SignatureIntrospector.extract_from_class(Service)
 
         self.assertEqual(len(deps), 2)
         self.assertEqual(deps[0].name, "database")
@@ -192,7 +192,7 @@ class TestSignatureIntrospection(unittest.TestCase):
         def factory(db: str, port: int) -> str:
             return f"{db}:{port}"
 
-        deps = SignatureIntrospector.extract_dependencies(factory)
+        deps = SignatureIntrospector.extract_from_callable(factory)
 
         self.assertEqual(len(deps), 2)
         self.assertEqual(deps[0].name, "db")
@@ -209,7 +209,7 @@ class TestSignatureIntrospection(unittest.TestCase):
             port: int
             debug: bool = False
 
-        deps = SignatureIntrospector.extract_dependencies(Config)
+        deps = SignatureIntrospector.extract_from_class(Config)
 
         self.assertEqual(len(deps), 3)
         # Check that optional field with default is detected

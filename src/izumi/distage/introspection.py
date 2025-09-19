@@ -43,17 +43,7 @@ class SignatureIntrospector:
     """Analyzes function/class signatures to extract dependency information."""
 
     @staticmethod
-    def extract_dependencies(target: Any) -> list[DependencyInfo]:
-        """Extract dependency information from a class constructor or function."""
-        if inspect.isclass(target):
-            return SignatureIntrospector._extract_from_class(target)
-        elif callable(target):
-            return SignatureIntrospector._extract_from_callable(target)
-        else:
-            return []
-
-    @staticmethod
-    def _extract_from_class(target_class: type) -> list[DependencyInfo]:
+    def extract_from_class(target_class: type) -> list[DependencyInfo]:
         """Extract dependencies from a class constructor."""
         if is_dataclass(target_class):
             return SignatureIntrospector._extract_from_dataclass(target_class)
@@ -61,7 +51,7 @@ class SignatureIntrospector:
         try:
             init_method: Any = getattr(target_class, "__init__", None)  # pyright: ignore[reportUnknownArgumentType]
             if init_method:
-                return SignatureIntrospector._extract_from_callable(init_method, skip_self=True)
+                return SignatureIntrospector.extract_from_callable(init_method, skip_self=True)
         except AttributeError:
             pass
 
@@ -112,7 +102,7 @@ class SignatureIntrospector:
         return type_hint, None
 
     @staticmethod
-    def _extract_from_callable(
+    def extract_from_callable(
         func: Callable[..., Any], skip_self: bool = False
     ) -> list[DependencyInfo]:
         """Extract dependencies from a callable."""

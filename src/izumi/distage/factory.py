@@ -7,10 +7,7 @@ allowing users to explicitly opt into non-singleton semantics when necessary.
 
 from __future__ import annotations
 
-import inspect
 from typing import Any, TypeVar
-
-from .introspection import DependencyInfo, SignatureIntrospector
 
 T = TypeVar("T")
 
@@ -39,14 +36,15 @@ class Factory[T]:
         self._target_type = target_type
         self._locator = locator
         self._functoid = functoid
-        # Extract dependencies from the functoid's original source for proper parameter mapping
-        # The functoid is used for creation, but we need the original signature for assisted injection
-        if hasattr(functoid, "original_class") and functoid.original_class:
-            self._dependencies = SignatureIntrospector.extract_dependencies(functoid.original_class)
-        elif hasattr(functoid, "original_func") and functoid.original_func:
-            self._dependencies = SignatureIntrospector.extract_dependencies(functoid.original_func)
-        else:
-            self._dependencies = SignatureIntrospector.extract_dependencies(target_type)
+        # Get dependencies directly from the functoid
+        self._dependency_keys = functoid.keys()
+        self._dependencies = functoid.sig()
+
+        # Create mapping from DIKey to parameter name for better error messages
+        self._key_to_param_name: dict[Any, str] = {}
+        for i, dep in enumerate(self._dependencies):
+            if i < len(self._dependency_keys):
+                self._key_to_param_name[self._dependency_keys[i]] = dep.name
 
     def create(self, *args: Any, **kwargs: Any) -> T:
         """
@@ -68,71 +66,79 @@ class Factory[T]:
             ValueError: If required dependencies are missing and not provided
             TypeError: If provided arguments don't match expected dependencies
         """
-        resolved_kwargs: dict[str, Any] = {}
-        missing_unnamed: list[DependencyInfo] = []
-        missing_named: dict[str, DependencyInfo] = {}
+        resolved_args: list[Any] = []
+        missing_unnamed_names: list[str] = []
+        missing_named: set[str] = set()
 
         # Try to resolve each dependency from the DI system
-        for dep in self._dependencies:
-            # Skip dependencies with 'Any' type hint as they're usually introspection failures
-            if dep.type_hint == Any:
-                continue
-
-            if (not dep.is_optional or dep.default_value == inspect.Parameter.empty) and isinstance(
-                dep.type_hint, type
-            ):
-                try:
-                    # Try to resolve from the DI system
-                    resolved_kwargs[dep.name] = self._locator.get(
-                        dep.type_hint, dep.dependency_name
+        for di_key in self._dependency_keys:
+            try:
+                # Try to resolve from the DI system
+                resolved_value = self._locator.get(di_key.target_type, di_key.name)
+                resolved_args.append(resolved_value)
+            except ValueError:
+                # Dependency not available in DI system, needs to be provided
+                if di_key.name is None:
+                    # Unnamed dependency - will be provided via args
+                    # Use parameter name from mapping for better error reporting
+                    param_name = self._key_to_param_name.get(
+                        di_key, str(di_key.target_type.__name__)
                     )
-                except ValueError:
-                    # Dependency not available in DI system, needs to be provided
-                    if dep.dependency_name is None:
-                        # Unnamed dependency - will be provided via args
-                        missing_unnamed.append(dep)
-                    else:
-                        # Named dependency - will be provided via kwargs
-                        missing_named[dep.dependency_name] = dep
-            elif dep.is_optional and dep.default_value != inspect.Parameter.empty:
-                # Use default value for optional dependencies
-                resolved_kwargs[dep.name] = dep.default_value
+                    missing_unnamed_names.append(param_name)
+                    resolved_args.append(None)  # Placeholder
+                else:
+                    # Named dependency - will be provided via kwargs
+                    missing_named.add(di_key.name)
+                    resolved_args.append(None)  # Placeholder
 
-        # Handle missing unnamed dependencies through positional args
-        if len(args) != len(missing_unnamed) and missing_unnamed:
-            dep_names = [dep.name for dep in missing_unnamed]
-            raise ValueError(
-                f"Factory for {self._target_type.__name__} requires {len(missing_unnamed)} "
-                f"positional arguments for dependencies {dep_names}, but {len(args)} were provided"
-            )
-
-        for i, dep in enumerate(missing_unnamed):
-            resolved_kwargs[dep.name] = args[i]
-
-        # Handle missing named dependencies through keyword args
-        for dep_name, dep in missing_named.items():
-            if dep_name not in kwargs:
+        # Check that we have values for all missing dependencies
+        missing_unnamed = len(missing_unnamed_names)
+        if len(args) != missing_unnamed:
+            if missing_unnamed_names:
+                param_names = ", ".join(f"'{name}'" for name in missing_unnamed_names)
                 raise ValueError(
-                    f"Factory for {self._target_type.__name__} requires keyword argument "
-                    f"'{dep_name}' for dependency '{dep.name}'"
+                    f"Factory for {self._target_type.__name__} requires {missing_unnamed} "
+                    f"positional arguments ({param_names}) but got {len(args)}"
                 )
-            resolved_kwargs[dep.name] = kwargs[dep_name]
+            else:
+                raise ValueError(
+                    f"Factory for {self._target_type.__name__} requires {missing_unnamed} "
+                    f"positional arguments but got {len(args)}"
+                )
+
+        # Check for missing named dependencies
+        provided_named = set(kwargs.keys())
+        missing_required = missing_named - provided_named
+
+        if missing_required:
+            missing_names = ", ".join(f"'{name}'" for name in sorted(missing_required))
+            raise ValueError(
+                f"Factory for {self._target_type.__name__} requires keyword argument {missing_names}"
+            )
 
         # Check for unexpected keyword arguments
-        unexpected_kwargs = set(kwargs.keys()) - set(missing_named.keys())
+        unexpected_kwargs = provided_named - missing_named
         if unexpected_kwargs:
+            unexpected_names = ", ".join(sorted(unexpected_kwargs))
             raise TypeError(
                 f"Factory for {self._target_type.__name__} got unexpected keyword arguments: "
-                f"{', '.join(unexpected_kwargs)}"
+                f"{unexpected_names}"
             )
 
+        # Fill in the missing dependencies with provided arguments
+        arg_index = 0
+        for i, di_key in enumerate(self._dependency_keys):
+            if resolved_args[i] is None:  # This was a missing dependency
+                if di_key.name is None:
+                    # Unnamed dependency - use positional arg
+                    resolved_args[i] = args[arg_index]
+                    arg_index += 1
+                else:
+                    # Named dependency - use keyword arg
+                    resolved_args[i] = kwargs[di_key.name]
+
         # Create and return the instance using the functoid
-        # Convert resolved_kwargs back to positional args based on dependencies order
-        args_for_functoid = []
-        for dep in self._dependencies:
-            if dep.name in resolved_kwargs:
-                args_for_functoid.append(resolved_kwargs[dep.name])  # pyright: ignore[reportUnknownMemberType]
-        result = self._functoid.call(*args_for_functoid)
+        result = self._functoid.call(*resolved_args)
         return result  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:
