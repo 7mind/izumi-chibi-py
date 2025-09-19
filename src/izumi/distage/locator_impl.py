@@ -9,7 +9,7 @@ from typing import Any, TypeVar
 
 from .locator_base import Locator
 from .logger_injection import AutoLoggerManager
-from .model import InstanceKey, Plan
+from .model import DIKey, InstanceKey, Plan
 
 T = TypeVar("T")
 
@@ -28,7 +28,7 @@ class LocatorImpl(Locator):
     def __init__(
         self,
         plan: Plan,
-        instances: dict[InstanceKey, object],
+        instances: dict[DIKey, object],
         parent: Locator,
     ):
         """
@@ -40,14 +40,14 @@ class LocatorImpl(Locator):
             parent: Parent locator for dependency inheritance
         """
         self._plan = plan
-        self._instances: dict[InstanceKey, object] = instances or {}
+        self._instances: dict[DIKey, object] = instances or {}
         self._parent = parent
 
-    def has_key_locally(self, key: InstanceKey) -> bool:
+    def has_key_locally(self, key: DIKey) -> bool:
         """Check if this locator has the key in its local instances."""
         return key in self._instances
 
-    def has_key(self, key: InstanceKey) -> bool:
+    def has_key(self, key: DIKey) -> bool:
         """Check if this locator (or its parent chain) has the key."""
         return self.has_key_locally(key) or self._parent.has_key(key)
 
@@ -90,38 +90,42 @@ class LocatorImpl(Locator):
 
         return self._instances[key]  # type: ignore[return-value]
 
-    def find(self, target_type: type[T], name: str | None = None) -> T | None:
+    def find(self, key: DIKey) -> Any | None:
         """
         Try to get an instance, returning None if not found.
 
         Args:
-            target_type: The type to resolve
-            name: Optional name qualifier
+            key: The DIKey to resolve
 
         Returns:
             An instance of the requested type or None if not found
         """
         try:
-            return self.get(target_type, name)
+            if isinstance(key, InstanceKey):
+                return self.get(key.target_type, key.name)
+            else:
+                # For SetElementKey, we don't support direct resolution
+                return None
         except ValueError:
             return None
 
-    def has(self, target_type: type[T], name: str | None = None) -> bool:
+    def has(self, key: DIKey) -> bool:
         """
-        Check if an instance can be resolved for the given type.
+        Check if an instance can be resolved for the given key.
 
         Args:
-            target_type: The type to check
-            name: Optional name qualifier
+            key: The DIKey to check
 
         Returns:
-            True if the type can be resolved, False otherwise
+            True if the key can be resolved, False otherwise
         """
-        key = InstanceKey(target_type, name)
-
         # Check if already resolved
         if key in self._instances:
             return True
+
+        # Only InstanceKey can be resolved directly
+        if not isinstance(key, InstanceKey):
+            return False
 
         # Check if we have a binding for it in the plan
         if self._plan.has_binding(key):
@@ -135,7 +139,7 @@ class LocatorImpl(Locator):
 
         # Check parent locator if available
         if not self._parent.is_empty():
-            return self._parent.has(target_type, name)
+            return self._parent.has(key)
 
         return False
 
@@ -179,7 +183,8 @@ class LocatorImpl(Locator):
             if not isinstance(dep.type_hint, type):
                 continue
 
-            if dep.is_optional and not self.has(dep.type_hint, dep.dependency_name):
+            dep_key = InstanceKey(dep.type_hint, dep.dependency_name)
+            if dep.is_optional and not self.has(dep_key):
                 continue  # Skip optional dependencies that can't be resolved
 
             resolved_args.append(self.get(dep.type_hint, dep.dependency_name))

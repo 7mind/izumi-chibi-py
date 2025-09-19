@@ -10,7 +10,7 @@ from typing import Any, TypeVar
 
 from .locator_base import Locator
 from .logger_injection import AutoLoggerManager
-from .model import DependencyGraph, ExecutableOp, InstanceKey, Plan
+from .model import DependencyGraph, DIKey, ExecutableOp, InstanceKey, Plan
 from .planner_input import PlannerInput
 
 T = TypeVar("T")
@@ -92,7 +92,7 @@ class Injector:
         Returns:
             A Locator containing all resolved instances
         """
-        instances: dict[InstanceKey, Any] = {}
+        instances: dict[DIKey, Any] = {}
 
         def resolve_instance(key: InstanceKey) -> Any:
             """Resolve a dependency and return an instance."""
@@ -103,10 +103,9 @@ class Injector:
 
         # Resolve all dependencies in topological order
         for binding_key in plan.get_execution_order():
-            if binding_key not in instances:
-                assert binding_key not in instances
-                instance = self._create_instance(binding_key, plan, instances, resolve_instance)
-                instances[binding_key] = instance
+            assert binding_key not in instances
+            instance = self._create_instance(binding_key, plan, instances, resolve_instance)
+            instances[binding_key] = instance
 
         from .locator_impl import LocatorImpl
 
@@ -154,7 +153,7 @@ class Injector:
         self,
         key: InstanceKey,
         plan: Plan,
-        instances: dict[InstanceKey, Any],  # noqa: ARG002
+        instances: dict[DIKey, Any],  # noqa: ARG002
         resolve_fn: Callable[[InstanceKey], Any],
     ) -> Any:
         """Create an instance for the given key."""

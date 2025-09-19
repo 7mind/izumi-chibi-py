@@ -123,23 +123,24 @@ class TestLocator(unittest.TestCase):
         locator = injector.produce(plan)
 
         # Test has() method
-        self.assertTrue(locator.has(ExistingService))
-        self.assertFalse(locator.has(MissingService))
+        from izumi.distage.model import InstanceKey
+        self.assertTrue(locator.has(InstanceKey(ExistingService)))
+        self.assertFalse(locator.has(InstanceKey(MissingService)))
 
-        self.assertTrue(locator.has(ExistingService))
+        self.assertTrue(locator.has(InstanceKey(ExistingService)))
 
         # Resolve the service
         service = locator.get(ExistingService)
         self.assertIsInstance(service, ExistingService)
 
         # Test has() after resolution
-        self.assertTrue(locator.has(ExistingService))
+        self.assertTrue(locator.has(InstanceKey(ExistingService)))
 
         # Test find() method
-        found_service = locator.find(ExistingService)
+        found_service = locator.find(InstanceKey(ExistingService))
         self.assertIs(found_service, service)
 
-        missing_service = locator.find(MissingService)
+        missing_service = locator.find(InstanceKey(MissingService))
         self.assertIsNone(missing_service)
 
     def test_backward_compatibility(self):

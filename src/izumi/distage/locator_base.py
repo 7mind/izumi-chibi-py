@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from .model import InstanceKey, Plan
+from .model import DIKey, InstanceKey, Plan
 
 T = TypeVar("T")
 
@@ -22,11 +22,11 @@ class Locator(ABC):
     """
 
     @abstractmethod
-    def has_key_locally(self, key: InstanceKey) -> bool:
+    def has_key_locally(self, key: DIKey) -> bool:
         """Check if this locator has the key in its local instances."""
 
     @abstractmethod
-    def has_key(self, key: InstanceKey) -> bool:
+    def has_key(self, key: DIKey) -> bool:
         """Check if this locator (or its parent chain) has the key."""
 
     @abstractmethod
@@ -50,29 +50,27 @@ class Locator(ABC):
         """
 
     @abstractmethod
-    def find(self, target_type: type[T], name: str | None = None) -> T | None:
+    def find(self, key: DIKey) -> Any | None:
         """
         Try to get an instance, returning None if not found.
 
         Args:
-            target_type: The type to resolve
-            name: Optional name qualifier
+            key: The DIKey to resolve
 
         Returns:
             An instance of the requested type or None if not found
         """
 
     @abstractmethod
-    def has(self, target_type: type[T], name: str | None = None) -> bool:
+    def has(self, key: DIKey) -> bool:
         """
-        Check if an instance can be resolved for the given type.
+        Check if an instance can be resolved for the given key.
 
         Args:
-            target_type: The type to check
-            name: Optional name qualifier
+            key: The DIKey to check
 
         Returns:
-            True if the type can be resolved, False otherwise
+            True if the key can be resolved, False otherwise
         """
 
     @abstractmethod
@@ -136,11 +134,11 @@ class LocatorEmpty(Locator):
             cls._instance = cls()
         return cls._instance
 
-    def has_key_locally(self, key: InstanceKey) -> bool:  # noqa: ARG002
+    def has_key_locally(self, key: DIKey) -> bool:  # noqa: ARG002
         """Empty locator has no keys locally."""
         return False
 
-    def has_key(self, key: InstanceKey) -> bool:  # noqa: ARG002
+    def has_key(self, key: DIKey) -> bool:  # noqa: ARG002
         """Empty locator has no keys."""
         return False
 
@@ -153,11 +151,11 @@ class LocatorEmpty(Locator):
         key = InstanceKey(target_type, name)
         raise ValueError(f"Empty locator cannot provide {key}")
 
-    def find(self, target_type: type[T], name: str | None = None) -> T | None:  # noqa: ARG002
+    def find(self, key: DIKey) -> Any | None:  # noqa: ARG002
         """Empty locator cannot find any instances."""
         return None
 
-    def has(self, target_type: type[T], name: str | None = None) -> bool:  # noqa: ARG002
+    def has(self, key: DIKey) -> bool:  # noqa: ARG002
         """Empty locator has no types."""
         return False
 
