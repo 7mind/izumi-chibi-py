@@ -15,6 +15,7 @@ from .graph import DependencyGraph
 from .keys import DIKey
 from .locator import Locator
 from .logger_injection import AutoLoggerManager
+from .operations import ExecutableOp
 from .plan import Plan
 from .planner_input import PlannerInput
 
@@ -169,19 +170,11 @@ class Injector:
         resolve_fn: Callable[[DIKey], Any],
     ) -> Any:
         """Create an instance for the given key."""
-        # Handle set bindings
-        origin = getattr(key.target_type, "__origin__", None)
-        if origin is set:
-            return self._resolve_set_binding(key, plan, resolve_fn)
+        # Get operation for this key
+        operations = plan.graph.get_operations()
+        operation = operations.get(key)
 
-        binding = plan.graph.get_binding(key)
-        if not binding:
-            # Check if we have set bindings for this type
-            set_key = DIKey(key.target_type, key.name)  # Create set key
-            set_bindings = plan.graph.get_set_bindings(set_key)
-            if set_bindings:
-                return self._resolve_set_binding_direct(set_bindings, resolve_fn)
-
+        if not operation:
             # Check parent locator if available
             if self._parent_locator is not None:
                 try:
@@ -189,53 +182,39 @@ class Injector:
                 except ValueError:
                     pass  # Parent doesn't have it either, fall through to error
 
-            raise ValueError(f"No binding found for {key}")
+            raise ValueError(f"No operation found for {key}")
 
-        return self._create_from_binding(binding, resolve_fn)
+        return self._execute_operation(operation, resolve_fn)
 
-    def _resolve_set_binding(
-        self, key: DIKey, plan: Plan, resolve_fn: Callable[[DIKey], Any]
-    ) -> set[Any]:
-        """Resolve a set binding."""
-        set_bindings = plan.graph.get_set_bindings(key)
-        return self._resolve_set_binding_direct(set_bindings, resolve_fn)
+    def _execute_operation(self, operation: ExecutableOp, resolve_fn: Callable[[DIKey], Any]) -> Any:
+        """Execute an operation with resolved dependencies."""
+        from .operations import CreateFactory
 
-    def _resolve_set_binding_direct(
-        self, set_bindings: list[Binding], resolve_fn: Callable[[DIKey], Any]
-    ) -> set[Any]:
-        """Resolve set bindings directly from a list of bindings."""
-        result_set: set[Any] = set()
+        # Special handling for CreateFactory operations
+        if isinstance(operation, CreateFactory):
+            # Set the resolve function for the factory operation
+            operation.resolve_fn = resolve_fn
+            return operation.execute({})
 
-        for binding in set_bindings:
-            instance = self._create_from_binding(binding, resolve_fn)
-            result_set.add(instance)
+        # Build resolved dependencies map for other operations
+        resolved_deps: dict[DIKey, Any] = {}
+        for dep_key in operation.dependencies():
+            try:
+                resolved_deps[dep_key] = resolve_fn(dep_key)
+            except ValueError:
+                # Check if this is an auto-injectable logger
+                if AutoLoggerManager.should_auto_inject_logger(dep_key):
+                    # Create an appropriate logger as fallback
+                    from .logger_injection import LoggerLocationIntrospector
 
-        return result_set
-
-    def _create_from_binding(self, binding: Binding, resolve_fn: Callable[[DIKey], Any]) -> Any:
-        """Create an instance from a specific binding."""
-        functoid = binding.functoid
-
-        # Handle factory bindings specially
-        if binding.is_factory:
-            # For factory bindings, create a Factory[T] instance
-            # Extract the target type from Factory[T]
-            if isinstance(binding.key, DIKey):
-                if (
-                    hasattr(binding.key.target_type, "__args__")
-                    and binding.key.target_type.__args__  # pyright: ignore[reportUnknownMemberType]
-                ):  # pyright: ignore[reportUnknownMemberType]
-                    target_type = binding.key.target_type.__args__[0]  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                    return self._create_factory(target_type, resolve_fn, functoid)  # pyright: ignore[reportUnknownArgumentType]
+                    logger_name = LoggerLocationIntrospector.get_logger_location_name()
+                    resolved_deps[dep_key] = logging.getLogger(logger_name)
                 else:
-                    raise ValueError(f"Invalid Factory binding: {binding.key}")
-            else:
-                raise ValueError(
-                    f"Factory bindings must use DIKey, not SetElementKey: {binding.key}"
-                )
-        else:
-            # For all other functoids, resolve dependencies and call
-            return self._call_functoid(functoid, resolve_fn)
+                    # Re-raise the original error for non-logger dependencies
+                    raise
+
+        return operation.execute(resolved_deps)
+
 
     def _create_from_functoid_direct(
         self, functoid: Functoid[Any], resolve_fn: Callable[[DIKey], Any]

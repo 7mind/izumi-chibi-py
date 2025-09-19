@@ -42,7 +42,11 @@ class Plan:
 
     def keys(self) -> set[DIKey]:
         """Get all available keys in this plan."""
-        return set(self.graph.get_all_bindings().keys())
+        return set(self.graph.get_operations().keys())
+
+    def has_operation(self, key: DIKey) -> bool:
+        """Check if an operation exists for the given key."""
+        return key in self.graph.get_operations()
 
     def has_binding(self, key: DIKey) -> bool:
         """Check if a binding exists for the given key."""

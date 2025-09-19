@@ -12,6 +12,7 @@ from .bindings import Binding
 from .functoid import Functoid
 from .graph import DependencyGraph
 from .keys import DIKey
+from .operations import ExecutableOp
 from .roots import Roots
 
 
@@ -54,18 +55,11 @@ class DependencyResolver:
 
     def _create_instance(self, key: DIKey) -> Any:
         """Create an instance for the given key."""
-        # Handle set bindings
-        origin = getattr(key.target_type, "__origin__", None)
-        if origin is set:
-            return self._resolve_set_binding(key)
+        # Get operation for this key
+        operations = self._graph.get_operations()
+        operation = operations.get(key)
 
-        binding = self._graph.get_binding(key)
-        if not binding:
-            # Check if we have set bindings for this type
-            set_key = DIKey(key.target_type, key.name)  # Create set key
-            set_bindings = self._graph.get_set_bindings(set_key)
-            if set_bindings:
-                return self._resolve_set_binding_direct(set_bindings)
+        if not operation:
             # Check parent locator if available
             if self._parent_locator is not None:
                 try:
@@ -73,9 +67,42 @@ class DependencyResolver:
                 except ValueError:
                     pass  # Parent doesn't have it either
 
-            raise ValueError(f"No binding found for {key}")
+            raise ValueError(f"No operation found for {key}")
 
-        return self._create_from_binding(binding)
+        return self._execute_operation(operation)
+
+    def _execute_operation(self, operation: ExecutableOp) -> Any:
+        """Execute an operation with resolved dependencies."""
+        import logging
+
+        from .operations import CreateFactory
+
+        # Special handling for CreateFactory operations
+        if isinstance(operation, CreateFactory):
+            # Set the resolve function for the factory operation
+            operation.resolve_fn = self.resolve
+            return operation.execute({})
+
+        # Build resolved dependencies map for other operations
+        resolved_deps: dict[DIKey, Any] = {}
+        for dep_key in operation.dependencies():
+            try:
+                resolved_deps[dep_key] = self.resolve(dep_key)
+            except ValueError:
+                # Check if this is an auto-injectable logger
+                from .logger_injection import AutoLoggerManager
+
+                if AutoLoggerManager.should_auto_inject_logger(dep_key):
+                    # Create an appropriate logger as fallback
+                    from .logger_injection import LoggerLocationIntrospector
+
+                    logger_name = LoggerLocationIntrospector.get_logger_location_name()
+                    resolved_deps[dep_key] = logging.getLogger(logger_name)
+                else:
+                    # Re-raise the original error for non-logger dependencies
+                    raise
+
+        return operation.execute(resolved_deps)
 
     def _resolve_set_binding(self, key: DIKey) -> set[Any]:
         """Resolve a set binding."""

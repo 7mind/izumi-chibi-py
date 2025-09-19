@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from .activation import Activation
 from .bindings import Binding
 from .keys import DIKey, SetElementKey
+from .operations import CreateFactory, CreateSet, ExecutableOp, Provide
 
 if TYPE_CHECKING:
     from .locator import Locator
@@ -42,7 +43,7 @@ class GraphNode:
     """A node in the dependency graph."""
 
     key: DIKey
-    binding: Binding
+    operation: ExecutableOp
     dependencies: list[DIKey]
     dependents: set[DIKey]
 
@@ -57,6 +58,7 @@ class DependencyGraph:
         super().__init__()
         self._bindings: dict[DIKey, Binding] = {}
         self._alternative_bindings: dict[DIKey, list[Binding]] = defaultdict(list)
+        self._operations: dict[DIKey, ExecutableOp] = {}
         self._nodes: dict[DIKey, GraphNode] = {}
         self._set_bindings: dict[DIKey, list[Binding]] = defaultdict(list)
         self._validated = False
@@ -104,11 +106,54 @@ class DependencyGraph:
         """Get a graph node by key."""
         return self._nodes.get(key)
 
+    def get_operations(self) -> dict[DIKey, ExecutableOp]:
+        """Get all operations."""
+        return self._operations.copy()
+
+    def generate_operations(self) -> None:
+        """Generate operations from bindings."""
+        self._operations.clear()
+
+        # Create operations for regular bindings
+        for key, binding in self._bindings.items():
+            if binding.is_factory:
+                # Create CreateFactory operation for factory bindings
+                # Extract the target type from Factory[T]
+                if isinstance(key, DIKey):
+                    if (
+                        hasattr(key.target_type, "__args__")
+                        and key.target_type.__args__  # pyright: ignore[reportUnknownMemberType]
+                    ):  # pyright: ignore[reportUnknownMemberType]
+                        target_type = key.target_type.__args__[0]  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                        self._operations[key] = CreateFactory(key, target_type, binding)  # pyright: ignore[reportUnknownArgumentType]
+                    else:
+                        raise ValueError(f"Invalid Factory binding: {key}")
+                else:
+                    raise ValueError(f"Factory bindings must use DIKey, not SetElementKey: {key}")
+            else:
+                # Create Provide operation for regular bindings
+                self._operations[key] = Provide(binding)
+
+        # Create CreateSet operations for set bindings
+        for set_key, bindings in self._set_bindings.items():
+            element_keys = []
+            for binding in bindings:
+                # Create Provide operation for each set element
+                if isinstance(binding.key, SetElementKey):
+                    element_key = binding.key.element_key
+                    self._operations[element_key] = Provide(binding)
+                    element_keys.append(element_key)
+
+            # Create CreateSet operation to collect all elements
+            if element_keys:
+                self._operations[set_key] = CreateSet(set_key, element_keys)
+
     def validate(self) -> None:
         """Validate the dependency graph."""
         if self._validated:
             return
 
+        self.generate_operations()
         self._build_graph()
         self._check_missing_dependencies()
         self._check_circular_dependencies()
@@ -119,6 +164,7 @@ class DependencyGraph:
         if self._validated:
             return
 
+        self.generate_operations()
         self._build_graph()
         self._check_missing_dependencies_with_parent(parent_locator)
         self._check_circular_dependencies()
@@ -128,19 +174,11 @@ class DependencyGraph:
         """Build the dependency graph nodes."""
         self._nodes.clear()
 
-        # Create nodes for all bindings
-        for key, binding in self._bindings.items():
-            dependencies = self._extract_dependencies(binding)
-            node = GraphNode(key, binding, dependencies, set())
+        # Create nodes for all operations
+        for key, operation in self._operations.items():
+            dependencies = operation.dependencies()
+            node = GraphNode(key, operation, dependencies, set())
             self._nodes[key] = node
-
-        # Create nodes for set element bindings
-        for _, bindings in self._set_bindings.items():
-            for binding in bindings:
-                if isinstance(binding.key, SetElementKey):
-                    dependencies = self._extract_dependencies(binding)
-                    node = GraphNode(binding.key.element_key, binding, dependencies, set())
-                    self._nodes[binding.key.element_key] = node
 
         # Build dependent relationships
         for node in self._nodes.values():
@@ -149,19 +187,16 @@ class DependencyGraph:
                 if dep_node:
                     dep_node.dependents.add(node.key)
 
-    def _extract_dependencies(self, binding: Binding) -> list[DIKey]:
-        return binding.functoid.keys()
-
     def _check_missing_dependencies(self) -> None:
         """Check for missing dependencies."""
         for node in self._nodes.values():
-            # Skip dependency validation for factory bindings
-            # Factory bindings are expected to have missing dependencies (assisted injection)
-            if node.binding.is_factory:
+            # Skip dependency validation for factory operations
+            # Factory operations are expected to have missing dependencies (assisted injection)
+            if isinstance(node.operation, CreateFactory):
                 continue
 
             for dep_key in node.dependencies:
-                if dep_key not in self._bindings and dep_key not in self._set_bindings:
+                if dep_key not in self._operations:
                     # Check if this is an auto-injectable logger
                     from .logger_injection import AutoLoggerManager
 
@@ -173,13 +208,13 @@ class DependencyGraph:
     def _check_missing_dependencies_with_parent(self, parent_locator: Locator) -> None:
         """Check for missing dependencies, allowing parent locator to provide them."""
         for node in self._nodes.values():
-            # Skip dependency validation for factory bindings
-            # Factory bindings are expected to have missing dependencies (assisted injection)
-            if node.binding.is_factory:
+            # Skip dependency validation for factory operations
+            # Factory operations are expected to have missing dependencies (assisted injection)
+            if isinstance(node.operation, CreateFactory):
                 continue
 
             for dep_key in node.dependencies:
-                if dep_key not in self._bindings and dep_key not in self._set_bindings:
+                if dep_key not in self._operations:
                     # Check if this is an auto-injectable logger
                     from .logger_injection import AutoLoggerManager
 
@@ -316,7 +351,12 @@ class DependencyGraph:
         return matching_bindings[0]
 
     def garbage_collect(self, reachable_keys: set[DIKey]) -> None:
-        """Remove unreachable bindings from the graph."""
+        """Remove unreachable operations and bindings from the graph."""
+        # Filter operations
+        filtered_operations = {
+            key: operation for key, operation in self._operations.items() if key in reachable_keys
+        }
+
         # Filter main bindings
         filtered_bindings = {
             key: binding for key, binding in self._bindings.items() if key in reachable_keys
@@ -328,6 +368,7 @@ class DependencyGraph:
             if key in reachable_keys:
                 filtered_set_bindings[key] = bindings
 
+        self._operations = filtered_operations
         self._bindings = filtered_bindings
         self._set_bindings = filtered_set_bindings
         self._validated = False
