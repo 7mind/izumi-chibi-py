@@ -236,10 +236,23 @@ class Injector:
         """Create an instance from a specific binding."""
         functoid = binding.functoid
 
-        # Handle factory functoids specially
-        if functoid.original_target_type is not None:
+        # Handle factory bindings specially
+        if binding.is_factory:
             # For factory bindings, create a Factory[T] instance
-            return self._create_factory(functoid.original_target_type, resolve_fn)
+            # Extract the target type from Factory[T]
+            if isinstance(binding.key, DIKey):
+                if (
+                    hasattr(binding.key.target_type, "__args__")
+                    and binding.key.target_type.__args__  # pyright: ignore[reportUnknownMemberType]
+                ):  # pyright: ignore[reportUnknownMemberType]
+                    target_type = binding.key.target_type.__args__[0]  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                    return self._create_factory(target_type, resolve_fn, functoid)  # pyright: ignore[reportUnknownArgumentType]
+                else:
+                    raise ValueError(f"Invalid Factory binding: {binding.key}")
+            else:
+                raise ValueError(
+                    f"Factory bindings must use DIKey, not SetElementKey: {binding.key}"
+                )
         else:
             # For all other functoids, resolve dependencies and call
             return self._call_functoid(functoid, resolve_fn)
@@ -335,7 +348,9 @@ class Injector:
 
         return factory(**kwargs)
 
-    def _create_factory(self, target_type: type, resolve_fn: Callable[[DIKey], Any]) -> Any:
+    def _create_factory(
+        self, target_type: type, resolve_fn: Callable[[DIKey], Any], functoid: Functoid[Any]
+    ) -> Any:
         """Create a Factory[T] instance for the given target type."""
         from .factory import Factory
 
@@ -344,12 +359,12 @@ class Injector:
             def __init__(self, resolve_fn: Callable[[DIKey], Any]):
                 self._resolve_fn = resolve_fn
 
-            def get(self, target_type: type, name: str | None = None) -> Any:
+            def get(self, target_type: type, name: str | None = None) -> Any:  # noqa: A002
                 key = DIKey(target_type, name)
                 return self._resolve_fn(key)
 
         locator = ResolverLocator(resolve_fn)
-        return Factory(target_type, locator)  # pyright: ignore[reportUnknownVariableType]
+        return Factory(target_type, locator, functoid)  # pyright: ignore[reportUnknownVariableType]
 
     @classmethod
     def inherit(cls, parent_locator: Locator) -> Injector:

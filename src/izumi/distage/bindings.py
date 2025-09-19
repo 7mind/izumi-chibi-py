@@ -21,6 +21,7 @@ class Binding:
     key: DIKey | SetElementKey
     functoid: Functoid[Any]
     activation_tags: set[Any] | None = None  # Use Any to avoid circular import issues
+    is_factory: bool = False  # Flag to indicate if this is a Factory[T] binding
 
     def __post_init__(self) -> None:
         if self.activation_tags is None:

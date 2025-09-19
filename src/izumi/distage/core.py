@@ -12,7 +12,6 @@ from .bindings import Binding
 from .functoid import (
     Functoid,
     class_functoid,
-    factory_functoid,
     function_functoid,
     set_element_functoid,
     value_functoid,
@@ -86,8 +85,18 @@ class BindingBuilder[T]:
                 if isinstance(self._tag, AxisChoiceDef):
                     activation_tags.add(self._tag)
 
+            # Check if this is a Factory[T] binding
+            is_factory = False
+            if hasattr(self._target_type, "__origin__"):
+                from .factory import Factory
+
+                try:
+                    is_factory = self._target_type.__origin__ is Factory  # type: ignore[union-attr]
+                except AttributeError:
+                    is_factory = False
+
             # Create binding with the functoid
-            binding = Binding(key, functoid, activation_tags)
+            binding = Binding(key, functoid, activation_tags, is_factory)
             self._module.add_binding(binding)
 
         return UsingBuilder(self._target_type, finalize_binding)
@@ -164,7 +173,12 @@ class UsingBuilder[T]:
         functoid = function_functoid(factory)
         self._finalize_callback(functoid)
 
-    def factory(self, target_type: type[T]) -> None:  # type: ignore[valid-type]
-        """Bind to a Factory[T] that creates instances on-demand."""
-        functoid: Functoid[T] = factory_functoid(target_type)
+    def factory_type(self, target_class: type[T]) -> None:  # type: ignore[valid-type]
+        """Bind to a Factory[T] that creates class instances on-demand."""
+        functoid: Functoid[T] = class_functoid(target_class)
+        self._finalize_callback(functoid)
+
+    def factory_func(self, factory_function: Callable[..., T]) -> None:
+        """Bind to a Factory[T] that creates instances using a factory function on-demand."""
+        functoid: Functoid[T] = function_functoid(factory_function)
         self._finalize_callback(functoid)

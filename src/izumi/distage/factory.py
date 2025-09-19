@@ -27,17 +27,26 @@ class Factory[T]:
         instance = factory.create(missing_param="value")
     """
 
-    def __init__(self, target_type: type[T], locator: Any) -> None:
+    def __init__(self, target_type: type[T], locator: Any, functoid: Any = None) -> None:
         """
         Initialize the factory.
 
         Args:
             target_type: The type of objects this factory creates
             locator: The locator for resolving dependencies
+            functoid: Optional functoid to use for creating instances
         """
         self._target_type = target_type
         self._locator = locator
-        self._dependencies = SignatureIntrospector.extract_dependencies(target_type)
+        self._functoid = functoid
+        # Always extract dependencies from the target type for proper parameter mapping
+        # The functoid is used for creation, but we need the original signature for assisted injection
+        if functoid and hasattr(functoid, "original_class") and functoid.original_class:
+            self._dependencies = SignatureIntrospector.extract_dependencies(functoid.original_class)
+        elif functoid and hasattr(functoid, "original_func") and functoid.original_func:
+            self._dependencies = SignatureIntrospector.extract_dependencies(functoid.original_func)
+        else:
+            self._dependencies = SignatureIntrospector.extract_dependencies(target_type)
 
     def create(self, *args: Any, **kwargs: Any) -> T:
         """
@@ -118,7 +127,18 @@ class Factory[T]:
             )
 
         # Create and return the instance
-        return self._target_type(**resolved_kwargs)
+        if self._functoid:
+            # Use functoid to create the instance
+            # Convert resolved_kwargs back to positional args based on dependencies order
+            args_for_functoid = []
+            for dep in self._dependencies:
+                if dep.name in resolved_kwargs:
+                    args_for_functoid.append(resolved_kwargs[dep.name])  # pyright: ignore[reportUnknownMemberType]
+            result = self._functoid.call(*args_for_functoid)
+            return result  # type: ignore[no-any-return]
+        else:
+            # Fallback to direct instantiation
+            return self._target_type(**resolved_kwargs)
 
     def __repr__(self) -> str:
         return f"Factory[{self._target_type.__name__}]"

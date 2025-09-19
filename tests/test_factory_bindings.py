@@ -23,7 +23,7 @@ class TestFactoryBindings(unittest.TestCase):
                 return f"Service created at: {self.created_at}"
 
         module = ModuleDef()
-        module.make(Factory[Service]).using().factory(Service)
+        module.make(Factory[Service]).using().factory_type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -58,7 +58,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         module = ModuleDef()
         module.make(Config).using().value(Config("injected"))
-        module.make(Factory[Service]).using().factory(Service)
+        module.make(Factory[Service]).using().factory_type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -84,7 +84,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         module = ModuleDef()
         module.make(Config).using().value(Config("from-di"))
-        module.make(Factory[Service]).using().factory(Service)
+        module.make(Factory[Service]).using().factory_type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -111,7 +111,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         module = ModuleDef()
         module.make(Config).using().value(Config("from-di"))
-        module.make(Factory[Service]).using().factory(Service)
+        module.make(Factory[Service]).using().factory_type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -153,7 +153,7 @@ class TestFactoryBindings(unittest.TestCase):
         module = ModuleDef()
         module.make(Database).using().type(Database)
         module.make(Cache).using().type(Cache)
-        module.make(Factory[Service]).using().factory(Service)
+        module.make(Factory[Service]).using().factory_type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -173,7 +173,7 @@ class TestFactoryBindings(unittest.TestCase):
                 self.required_param = required_param
 
         module = ModuleDef()
-        module.make(Factory[Service]).using().factory(Service)
+        module.make(Factory[Service]).using().factory_type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -193,7 +193,7 @@ class TestFactoryBindings(unittest.TestCase):
                 self.api_key = api_key
 
         module = ModuleDef()
-        module.make(Factory[Service]).using().factory(Service)
+        module.make(Factory[Service]).using().factory_type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -212,7 +212,7 @@ class TestFactoryBindings(unittest.TestCase):
                 pass
 
         module = ModuleDef()
-        module.make(Factory[Service]).using().factory(Service)
+        module.make(Factory[Service]).using().factory_type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -240,7 +240,7 @@ class TestFactoryBindings(unittest.TestCase):
 
         module = ModuleDef()
         module.make(Config).using().value(Config("from-di"))
-        module.make(Factory[Service]).using().factory(Service)
+        module.make(Factory[Service]).using().factory_type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -261,7 +261,7 @@ class TestFactoryBindings(unittest.TestCase):
                 self.instance_id = Counter.count
 
         module = ModuleDef()
-        module.make(Factory[Counter]).using().factory(Counter)
+        module.make(Factory[Counter]).using().factory_type(Counter)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -292,7 +292,7 @@ class TestFactoryBindings(unittest.TestCase):
         # Regular singleton binding
         module.make(Service).using().type(Service)
         # Factory binding for same type with different name
-        module.make(Factory[Service]).named("factory").using().factory(Service)
+        module.make(Factory[Service]).named("factory").using().factory_type(Service)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -348,7 +348,7 @@ class TestFactoryBindings(unittest.TestCase):
         module.make(DatabaseConfig).using().value(DatabaseConfig("prod://db"))
         module.make(Database).using().type(Database)
         module.make(UserRepository).using().type(UserRepository)
-        module.make(Factory[UserService]).using().factory(UserService)
+        module.make(Factory[UserService]).using().factory_type(UserService)
 
         injector = Injector()
         planner_input = PlannerInput([module])
@@ -364,6 +364,35 @@ class TestFactoryBindings(unittest.TestCase):
         # Different instances but sharing the same singleton dependencies
         self.assertIsNot(user_service1, user_service2)
         self.assertIs(user_service1.repository, user_service2.repository)  # Singleton
+
+
+class TestFactoryFunc(unittest.TestCase):
+    """Test factory_func binding method."""
+
+    def test_factory_func_binding(self):
+        """Test Factory[T] binding with factory function."""
+
+        class Config:
+            def __init__(self, value: str = "default"):
+                self.value = value
+
+        def create_service(config: Config, message: str) -> str:
+            return f"{config.value}: {message}"
+
+        module = ModuleDef()
+        module.make(Config).using().value(Config("from-di"))
+        module.make(Factory[str]).using().factory_func(create_service)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        factory = injector.get(planner_input, Factory[str])
+
+        # Test that we get a Factory instance
+        self.assertIsInstance(factory, Factory)
+
+        # The 'message' parameter is not available in DI, so it must be provided
+        result = factory.create("hello world")
+        self.assertEqual(result, "from-di: hello world")
 
 
 class TestFactoryRepr(unittest.TestCase):
@@ -382,16 +411,6 @@ class TestFactoryRepr(unittest.TestCase):
 
         factory = Factory(TestService, MockLocator())
         self.assertEqual(repr(factory), "Factory[TestService]")
-
-    def test_factory_functoid_repr(self):
-        """Test factory_functoid __repr__ method."""
-        from izumi.distage.functoid import factory_functoid
-
-        class TestService:
-            pass
-
-        functoid = factory_functoid(TestService)
-        self.assertTrue("FactoryFunctoid(TestService)" in repr(functoid))
 
 
 if __name__ == "__main__":

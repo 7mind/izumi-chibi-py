@@ -163,6 +163,11 @@ class DependencyGraph:
     def _check_missing_dependencies(self) -> None:
         """Check for missing dependencies."""
         for node in self._nodes.values():
+            # Skip dependency validation for factory bindings
+            # Factory bindings are expected to have missing dependencies (assisted injection)
+            if node.binding.is_factory:
+                continue
+
             for dep_key in node.dependencies:
                 if dep_key not in self._bindings and dep_key not in self._set_bindings:
                     # Check if this is an auto-injectable logger
@@ -176,6 +181,11 @@ class DependencyGraph:
     def _check_missing_dependencies_with_parent(self, parent_locator: Locator) -> None:
         """Check for missing dependencies, allowing parent locator to provide them."""
         for node in self._nodes.values():
+            # Skip dependency validation for factory bindings
+            # Factory bindings are expected to have missing dependencies (assisted injection)
+            if node.binding.is_factory:
+                continue
+
             for dep_key in node.dependencies:
                 if dep_key not in self._bindings and dep_key not in self._set_bindings:
                     # Check if this is an auto-injectable logger

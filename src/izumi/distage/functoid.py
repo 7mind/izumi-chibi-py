@@ -114,17 +114,3 @@ def set_element_functoid[T](inner_functoid: Functoid[T]) -> Functoid[T]:
         original_func=inner_functoid.original_func,
         original_target_type=inner_functoid.original_target_type,
     )
-
-
-def factory_functoid[T](target_type: type[T]) -> Functoid[T]:
-    """Create a functoid for Factory[T] bindings."""
-
-    def factory_call(*_args: Any, **_kwargs: Any) -> T:
-        raise RuntimeError(f"FactoryFunctoid for {target_type} should not be called directly")
-
-    return Functoid(
-        keys_fn=lambda: [],  # Factory functoids have no direct dependencies
-        call_fn=factory_call,
-        name=f"FactoryFunctoid({target_type.__name__})",
-        original_target_type=target_type,
-    )

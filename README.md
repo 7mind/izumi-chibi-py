@@ -16,7 +16,7 @@ At this point the project is not battle-tested. Expect dragons, landmines and va
 `distage` provides a powerful, type-safe dependency injection framework with:
 
 - **Non-invasive design** - No decorators, base classes, or framework-specific code required in your business logic
-- **Fluent DSL for defining bindings** - Type-safe API with `.using().value()/.type()/.func()/.factory()`
+- **Fluent DSL for defining bindings** - Type-safe API with `.using().value()/.type()/.func()/.factory_type()/.factory_func()`
 - **Signature introspection** - Automatic extraction of dependency requirements from type hints
 - **Dependency graph formation and validation** - Build and validate the complete dependency graph at startup
 - **Automatic logger injection** - Seamless injection of location-based loggers without manual setup
@@ -122,7 +122,7 @@ def create_database(config: Config) -> Database:
 module.make(Database).named("custom").using().func(create_database)
 
 # Factory bindings for non-singleton semantics
-module.make(Factory[UserService]).using().factory(UserService)
+module.make(Factory[UserService]).using().factory_type(UserService)
 
 # Named bindings for multiple instances
 module.make(str).named("db-url").using().value("postgresql://prod:5432/app")
@@ -190,7 +190,7 @@ class UserSession:
 module = ModuleDef()
 module.make(str).using().value("postgresql://prod:5432/app")
 module.make(Database).using().type(Database)
-module.make(Factory[UserSession]).using().factory(UserSession)
+module.make(Factory[UserSession]).using().factory_type(UserSession)
 
 injector = Injector()
 planner_input = PlannerInput([module])
