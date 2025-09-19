@@ -19,7 +19,6 @@ from .dsl import ModuleDef
 from .factory import Factory
 from .functoid import Functoid
 from .injector import Injector
-from .locator import create_locator
 from .locator_base import Locator
 from .model import Binding, DependencyGraph, DIKey, Plan, Id
 from .planner_input import PlannerInput
@@ -62,7 +61,6 @@ __all__ = [
     "Plan",
     "PlannerInput",
     "Locator",
-    "create_locator",
     "Tag",
     "Binding",
     "DependencyGraph",
