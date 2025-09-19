@@ -50,4 +50,6 @@ class Plan:
 
     def get_execution_order(self) -> list[DIKey]:
         """Get the topological order for execution."""
-        return self.topology.copy()
+        copy = self.topology.copy()
+        copy.reverse()
+        return copy
