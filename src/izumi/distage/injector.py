@@ -94,31 +94,20 @@ class Injector:
             A Locator containing all resolved instances
         """
         instances: dict[DIKey, Any] = {}
-        resolving: set[DIKey] = set()
 
         def resolve_instance(key: DIKey) -> Any:
             """Resolve a dependency and return an instance."""
-            # Check if already resolved
-            if key in instances:
+            if plan.has_operation(key):
                 return instances[key]
-
-            # Check for circular dependency during resolution
-            if key in resolving:
-                raise ValueError(f"Circular dependency detected during resolution: {key}")
-
-            resolving.add(key)
-
-            try:
-                instance = self._create_instance(key, plan, instances, resolve_instance)
-                instances[key] = instance
-                return instance
-            finally:
-                resolving.discard(key)
+            else:
+                return self._parent_locator.get(key.target_type, key.name)
 
         # Resolve all dependencies in topological order
-        for binding_key in plan.topology:
+        for binding_key in plan.get_execution_order():
             if binding_key not in instances:
-                resolve_instance(binding_key)
+                assert binding_key not in instances
+                instance = self._create_instance(binding_key, plan, instances, resolve_instance)
+                instances[binding_key] = instance
 
         from .locator_impl import LocatorImpl
         return LocatorImpl(plan, instances, self._parent_locator)
@@ -213,78 +202,6 @@ class Injector:
                     raise
 
         return operation.execute(resolved_deps)
-
-
-    def _create_from_functoid_direct(
-        self, functoid: Functoid[Any], resolve_fn: Callable[[DIKey], Any]
-    ) -> Any:
-        """Create an instance directly from a functoid."""
-        return self._call_functoid(functoid, resolve_fn)
-
-    def _call_functoid(self, functoid: Functoid[Any], resolve_fn: Callable[[DIKey], Any]) -> Any:
-        """Call a functoid by resolving its dependencies."""
-        # Get the functoid's dependencies
-        dependency_keys = functoid.keys()
-
-        # If no dependencies, just call it
-        if not dependency_keys:
-            return functoid.call()
-
-        # Get dependencies from functoid and resolve them
-        dependencies = functoid.sig()
-        resolved_args: list[Any] = []
-
-        for dep in dependencies:
-            # Skip Any types which are usually introspection failures
-            if dep.type_hint == Any:
-                continue
-            if (
-                (not dep.is_optional or dep.default_value == inspect.Parameter.empty)
-                and (isinstance(dep.type_hint, type) or hasattr(dep.type_hint, "__origin__"))
-                and not isinstance(dep.type_hint, str)
-            ):
-                # Handle both regular types and generic types (like set[T]), but skip string forward references
-                di_key = DIKey(dep.type_hint, dep.dependency_name)
-
-                # Special handling for automatic logger injection
-                if AutoLoggerManager.should_auto_inject_logger(di_key):
-                    # First try to resolve through normal DI, fallback to auto-injection
-                    try:
-                        resolved_value = resolve_fn(di_key)
-                    except ValueError:
-                        # Create an appropriate logger as fallback
-                        if functoid.original_class:
-                            logger_name = f"{functoid.original_class.__module__}.{functoid.original_class.__name__}"
-                        elif functoid.original_func:
-                            logger_name = f"{functoid.original_func.__module__}.{functoid.original_func.__name__}"
-                        else:
-                            logger_name = "unknown"
-                        resolved_value = logging.getLogger(logger_name)
-                else:
-                    resolved_value = resolve_fn(di_key)
-
-                resolved_args.append(resolved_value)
-            # For optional dependencies with defaults, let the functoid handle them
-
-        return functoid.call(*resolved_args)
-
-    def _create_factory(
-        self, target_type: type, resolve_fn: Callable[[DIKey], Any], functoid: Functoid[Any]
-    ) -> Any:
-        """Create a Factory[T] instance for the given target type."""
-        from .factory import Factory
-
-        # Create a locator-like object that uses the resolve_fn
-        class ResolverLocator:
-            def __init__(self, resolve_fn: Callable[[DIKey], Any]):
-                self._resolve_fn = resolve_fn
-
-            def get(self, target_type: type, name: str | None = None) -> Any:  # noqa: A002
-                key = DIKey(target_type, name)
-                return self._resolve_fn(key)
-
-        locator = ResolverLocator(resolve_fn)
-        return Factory(target_type, locator, functoid)  # pyright: ignore[reportUnknownVariableType]
 
     @classmethod
     def inherit(cls, parent_locator: Locator) -> Injector:
