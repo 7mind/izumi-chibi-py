@@ -52,10 +52,12 @@ Chibi Izumi follows these design principles from the original distage:
 
 This is a working implementation with some simplifications compared to the full distage library:
 
+- No proxies and circular reference resolution
+- No support for Multi-Modal Applications (Roles) and Testkit 
 - Forward references in type hints have limited support
 - No advanced lifecycle management (startup/shutdown hooks)
 - Simplified error messages compared to Scala version
-- No compile-time dependency graph visualization tools
+- No dependency graph visualization tools
 
 
 ## Quick Start

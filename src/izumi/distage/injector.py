@@ -78,9 +78,12 @@ class Injector:
             result = injector.produce_run(input, my_app)
             ```
         """
+        return self.plan_produce(input).run(func)
+
+    def plan_produce(self, input: PlannerInput) -> Locator:
         plan = self.plan(input)
         locator = self.produce(plan)
-        return locator.run(func)
+        return locator
 
     def produce(self, plan: Plan) -> Locator:
         """
