@@ -54,6 +54,7 @@ This is a working implementation with some simplifications compared to the full 
 - No advanced lifecycle management (startup/shutdown hooks)
 - Simplified error messages compared to Scala version
 - No dependency graph visualization tools
+- **Proper Axis solver is not implemented yet**, instead currently we rely on simple filter-based approximation.
 
 
 ## Quick Start
