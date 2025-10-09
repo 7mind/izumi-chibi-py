@@ -43,6 +43,7 @@ Chibi Izumi provides a powerful, type-safe dependency injection framework with:
 - **Set bindings** - Collect multiple implementations into sets
 - **Locator inheritance** - Create child injectors that inherit dependencies from parent locators
 - **Roles for multi-tenant applications** - Define multiple application entrypoints as roles that can be selectively executed
+- **Lifecycle resource management** - Automatic acquisition and cleanup of resources with guaranteed release
 
 
 ## Limitations
@@ -50,7 +51,7 @@ Chibi Izumi provides a powerful, type-safe dependency injection framework with:
 This is a working implementation with some simplifications compared to the full distage library:
 
 - No proxies and circular reference resolution
-- No support for advanced lifecycle management and Testkit yet
+- No support for Testkit yet
 - Forward references in type hints have limited support
 - Simplified error messages compared to Scala version
 - No dependency graph visualization tools
@@ -569,19 +570,82 @@ python app.py
 
 This pattern enables building flexible monoliths where different entrypoints can be deployed independently or run together, without code duplication.
 
+### Lifecycle - Resource Management
+
+The Lifecycle feature (inspired by [distage Resource bindings](https://izumi.7mind.io/distage/basics.html#resource-bindings-lifecycle)) provides automatic resource management with guaranteed cleanup. Define acquire and release functions for resources like database connections:
+
+```python
+from izumi.distage import Injector, Lifecycle, ModuleDef, PlannerInput
+
+class DBConnection:
+    def __init__(self, connection_string: str):
+        self.connection_string = connection_string
+        self.connected = False
+
+    def connect(self) -> None:
+        print(f"Connecting to {self.connection_string}")
+        self.connected = True
+
+    def disconnect(self) -> None:
+        print(f"Disconnecting from {self.connection_string}")
+        self.connected = False
+
+    def query(self, sql: str) -> str:
+        assert self.connected, "Not connected"
+        return f"Result: {sql}"
+
+# Define lifecycle with acquire and release functions
+def db_lifecycle(connection_string: str) -> Lifecycle[DBConnection]:
+    def acquire() -> DBConnection:
+        conn = DBConnection(connection_string)
+        conn.connect()
+        return conn
+
+    def release(conn: DBConnection) -> None:
+        conn.disconnect()
+
+    return Lifecycle.make(acquire, release)
+
+# Use lifecycle-managed resource
+module = ModuleDef()
+module.make(str).using().value("postgresql://localhost:5432/mydb")
+module.make(DBConnection).using().fromResource(
+    db_lifecycle("postgresql://localhost:5432/mydb")
+)
+
+def app(db: DBConnection) -> str:
+    return db.query("SELECT * FROM users")
+
+injector = Injector()
+result = injector.produce_run(PlannerInput([module]), app)
+# Resources are automatically acquired before app() and released after
+```
+
+**Key features:**
+- **Automatic cleanup**: Resources are always released, even if exceptions occur
+- **LIFO ordering**: Resources are released in reverse order of acquisition
+- **Dependency injection**: Lifecycle acquire functions can have dependencies injected
+- **Type-safe**: Full type checking for acquire and release functions
+
+**Lifecycle constructors:**
+- `Lifecycle.make(acquire, release)`: Standard lifecycle with explicit cleanup
+- `Lifecycle.pure(value)`: Wrap a value without cleanup
+- `Lifecycle.fromFactory(factory)`: Create from a factory function without cleanup
+
+Resources are automatically managed within `locator.run()` or `injector.produce_run()` calls, ensuring proper cleanup even when errors occur.
+
 ## TODO: Future Features
 
 The following concepts from the original Scala distage library are planned for future implementation:
 
-### Framework - Advanced Lifecycle Management
+### Framework - Advanced Features
 
-The Framework module will provide additional features beyond basic Roles:
+The Framework module will provide additional features:
 
-- **Lifecycle hooks** - Automatic startup/shutdown hooks for resources
 - **Health checks** - Built-in health monitoring for roles
 - **Configuration integration** - Seamless integration with configuration management
-- **Resource management** - Proper cleanup of resources like database connections, file handles
 - **Graceful shutdown** - Clean termination of long-running services
+- **Plugin system** - Dynamic loading and management of plugins
 
 ### Testkit - Testing Support
 

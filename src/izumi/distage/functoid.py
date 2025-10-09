@@ -125,3 +125,20 @@ def set_element_functoid[T](inner_functoid: Functoid[T]) -> Functoid[T]:
         original_func=inner_functoid.original_func,
         original_target_type=inner_functoid.original_target_type,
     )
+
+
+def lifecycle_functoid(lifecycle: Any) -> Functoid[Any]:
+    """Create a functoid from a Lifecycle resource."""
+    from .lifecycle import Lifecycle
+
+    assert isinstance(lifecycle, Lifecycle), f"Expected Lifecycle, got {type(lifecycle)}"
+
+    dependencies = SignatureIntrospector.extract_from_callable(lifecycle.acquire)
+
+    return Functoid(  # pyright: ignore[reportUnknownVariableType]
+        keys_fn=lambda: SignatureIntrospector.get_binding_keys(dependencies),
+        sig_fn=lambda: dependencies,
+        call_fn=lifecycle.acquire,
+        name=f"LifecycleFunctoid({lifecycle.acquire.__name__})",
+        original_func=lifecycle.acquire,
+    )

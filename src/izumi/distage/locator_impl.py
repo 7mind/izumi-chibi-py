@@ -142,9 +142,10 @@ class LocatorImpl(Locator):
 
     def run(self, func: Callable[..., T]) -> T:
         """
-        Execute a function with dependency injection.
+        Execute a function with dependency injection and automatic resource cleanup.
 
         Uses the signature of the function to determine what dependencies to inject.
+        Automatically releases any lifecycle-managed resources when the function exits.
 
         Args:
             func: Function to execute with injected dependencies
@@ -162,27 +163,56 @@ class LocatorImpl(Locator):
 
         from .introspection import SignatureIntrospector
 
-        # Extract dependency information from the function signature
-        dependencies = SignatureIntrospector.extract_from_callable(func)
+        # Track lifecycle resources for cleanup
+        lifecycle_resources: list[tuple[Any, Any]] = []  # [(instance, lifecycle), ...]
 
-        # Resolve each dependency
-        resolved_args: list[Any] = []
-        for dep in dependencies:
-            # Skip parameters without proper type hints
-            if dep.type_hint == type(None) or dep.type_hint == inspect.Parameter.empty:  # noqa: E721
-                continue
+        try:
+            # Collect all lifecycle bindings used in this execution
+            for key, instance in self._instances.items():
+                if isinstance(key, InstanceKey):
+                    # Find the binding for this key
+                    operations = self._plan.graph.get_operations()
+                    if key in operations:
+                        from .model.operations import Provide
 
-            # Skip if type_hint is not a type
-            if not isinstance(dep.type_hint, type):
-                continue
+                        operation = operations[key]
+                        if isinstance(operation, Provide) and operation.binding.lifecycle:
+                            lifecycle_resources.append((instance, operation.binding.lifecycle))
 
-            dep_key = DIKey.of(dep.type_hint, dep.dependency_name)
-            if dep.is_optional and not self.has(dep_key):
-                continue  # Skip optional dependencies that can't be resolved
+            # Extract dependency information from the function signature
+            dependencies = SignatureIntrospector.extract_from_callable(func)
 
-            resolved_args.append(self.get(dep_key))
+            # Resolve each dependency
+            resolved_args: list[Any] = []
+            for dep in dependencies:
+                # Skip parameters without proper type hints
+                if dep.type_hint == type(None) or dep.type_hint == inspect.Parameter.empty:  # noqa: E721
+                    continue
 
-        return func(*resolved_args)
+                # Skip if type_hint is not a type
+                if not isinstance(dep.type_hint, type):
+                    continue
+
+                dep_key = DIKey.of(dep.type_hint, dep.dependency_name)
+                if dep.is_optional and not self.has(dep_key):
+                    continue  # Skip optional dependencies that can't be resolved
+
+                resolved_args.append(self.get(dep_key))
+
+            # Execute the function
+            return func(*resolved_args)
+        finally:
+            # Release resources in reverse order (LIFO)
+            for instance, lifecycle in reversed(lifecycle_resources):
+                try:
+                    lifecycle.release(instance)
+                except Exception as e:
+                    # Log but don't fail the cleanup
+                    import logging
+
+                    logging.getLogger(__name__).error(
+                        f"Error releasing resource {instance}: {e}", exc_info=True
+                    )
 
     def plan(self) -> Plan:
         """Get the Plan this Locator is executing."""

@@ -19,6 +19,7 @@ from .dsl import ModuleDef
 from .factory import Factory
 from .functoid import Functoid
 from .injector import Injector
+from .lifecycle import Lifecycle
 from .locator_base import Locator
 from .model import Binding, DependencyGraph, Id, InstanceKey, Plan
 from .planner_input import PlannerInput
@@ -80,4 +81,5 @@ __all__ = [
     "RoleDescriptor",
     "EntrypointArgs",
     "RoleAppMain",
+    "Lifecycle",
 ]

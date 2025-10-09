@@ -120,8 +120,11 @@ class BindingBuilder[T]:
                 except AttributeError:
                     is_factory = False
 
+            # Extract lifecycle if present
+            lifecycle = getattr(functoid, "_lifecycle", None)
+
             # Create the original binding
-            binding = Binding(key, functoid, activation_tags, is_factory)
+            binding = Binding(key, functoid, activation_tags, is_factory, False, lifecycle)
             self._module.add_binding(binding)
 
             # Create the alias lookup operation
@@ -163,8 +166,11 @@ class BindingBuilder[T]:
                     except AttributeError:
                         is_factory = False
 
+                # Extract lifecycle if present
+                lifecycle = getattr(functoid, "_lifecycle", None)
+
                 # Create binding with the functoid
-                binding = Binding(key, functoid, activation_tags, is_factory)
+                binding = Binding(key, functoid, activation_tags, is_factory, False, lifecycle)
                 self._module.add_binding(binding)
 
         return UsingBuilder(self._target_type, finalize_binding)
@@ -279,6 +285,25 @@ class UsingBuilder[T]:
         """Bind to a Factory[T] that creates instances using a factory function on-demand."""
         functoid: Functoid[T] = function_functoid(factory_function)
         self._finalize_callback(functoid)
+
+    def fromResource(self, resource: Any) -> None:
+        """Bind to a Lifecycle resource that will be acquired and released."""
+        from .functoid import lifecycle_functoid
+        from .lifecycle import Lifecycle
+
+        assert isinstance(resource, Lifecycle), f"Expected Lifecycle, got {type(resource)}"
+
+        # Create a special finalize callback that includes lifecycle info
+        original_finalize = self._finalize_callback
+
+        def finalize_with_lifecycle(functoid: Functoid[T]) -> None:
+            # We need to modify the binding to include lifecycle
+            # This is a bit hacky but necessary to pass lifecycle through
+            functoid._lifecycle = resource  # type: ignore[attr-defined]
+            original_finalize(functoid)
+
+        functoid: Functoid[T] = lifecycle_functoid(resource)
+        finalize_with_lifecycle(functoid)
 
 
 class SubcontextBuilder[T]:
