@@ -42,6 +42,7 @@ Chibi Izumi provides a powerful, type-safe dependency injection framework with:
 - **Tagged bindings** - Support for multiple implementations of the same interface
 - **Set bindings** - Collect multiple implementations into sets
 - **Locator inheritance** - Create child injectors that inherit dependencies from parent locators
+- **Roles for multi-tenant applications** - Define multiple application entrypoints as roles that can be selectively executed
 
 
 ## Limitations
@@ -49,9 +50,8 @@ Chibi Izumi provides a powerful, type-safe dependency injection framework with:
 This is a working implementation with some simplifications compared to the full distage library:
 
 - No proxies and circular reference resolution
-- No support for Multi-Modal Applications (Roles) and Testkit 
+- No support for advanced lifecycle management and Testkit yet
 - Forward references in type hints have limited support
-- No advanced lifecycle management (startup/shutdown hooks)
 - Simplified error messages compared to Scala version
 - No dependency graph visualization tools
 - **Proper Axis solver is not implemented yet**, instead currently we rely on simple filter-based approximation.
@@ -494,20 +494,94 @@ Key benefits of locator inheritance:
 - **Override capability**: Child bindings take precedence over parent bindings
 - **Multi-level inheritance**: Create inheritance chains for complex scenarios
 
+### Roles - Multi-Tenant Applications
+
+The Roles feature (inspired by [distage-framework Roles](https://izumi.7mind.io/distage/distage-framework.html#roles)) enables building flexible modular applications with multiple entrypoints. Define components as roles that can be selectively executed from a single codebase:
+
+```python
+import logging
+from izumi.distage import ModuleDef, RoleAppMain, RoleTask, EntrypointArgs
+
+# Define roles as classes with an 'id' attribute
+class HelloTask(RoleTask):
+    id = "hello"
+
+    def __init__(self, logger: logging.Logger):
+        self.logger = logger
+
+    def start(self, args: EntrypointArgs) -> None:
+        name = args.raw_args[0] if args.raw_args else "World"
+        self.logger.info(f"Hello, {name}!")
+        print(f"Hello, {name}!")
+
+class GoodbyeTask(RoleTask):
+    id = "goodbye"
+
+    def __init__(self, logger: logging.Logger):
+        self.logger = logger
+
+    def start(self, args: EntrypointArgs) -> None:
+        name = args.raw_args[0] if args.raw_args else "World"
+        self.logger.info(f"Goodbye, {name}!")
+        print(f"Goodbye, {name}!")
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
+    # Register roles
+    module = ModuleDef()
+    module.makeRole(HelloTask)
+    module.makeRole(GoodbyeTask)
+
+    # Create and run the application
+    app = RoleAppMain()
+    app.add_module(module)
+    app.main()  # Parses sys.argv for role selection
+```
+
+**Usage:**
+```bash
+# Run single role
+python app.py :hello Alice
+# Output: Hello, Alice!
+
+# Run multiple roles
+python app.py :hello Alice :goodbye Bob
+# Output:
+# Hello, Alice!
+# Goodbye, Bob!
+
+# No roles specified
+python app.py
+# Output: No roles specified. Use :rolename to specify a role.
+```
+
+**Key features:**
+- **Selective execution**: Only specified roles are instantiated and executed
+- **Dependency injection**: Each role gets its own isolated DI context with resolved dependencies
+- **CLI-based selection**: Use `:rolename arg1 arg2` syntax for role invocation
+- **Multiple roles**: Execute multiple roles sequentially in a single run
+- **Flexible architecture**: Build monoliths that can be split into microservices later
+
+**Role types:**
+- `RoleTask`: One-off tasks and batch jobs
+- `RoleService`: Long-running services and daemons (both share the same base behavior currently)
+
+This pattern enables building flexible monoliths where different entrypoints can be deployed independently or run together, without code duplication.
+
 ## TODO: Future Features
 
 The following concepts from the original Scala distage library are planned for future implementation:
 
-### Framework - Roles and Flexible Monoliths
+### Framework - Advanced Lifecycle Management
 
-The Framework module will provide:
+The Framework module will provide additional features beyond basic Roles:
 
-- **Role-based application structure** - Define application components as roles that can be started/stopped independently
-- **Flexible monoliths** - Run multiple roles in a single process or distribute them across processes
-- **Lifecycle management** - Automatic startup/shutdown hooks for resources
+- **Lifecycle hooks** - Automatic startup/shutdown hooks for resources
 - **Health checks** - Built-in health monitoring for roles
 - **Configuration integration** - Seamless integration with configuration management
 - **Resource management** - Proper cleanup of resources like database connections, file handles
+- **Graceful shutdown** - Clean termination of long-running services
 
 ### Testkit - Testing Support
 
