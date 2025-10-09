@@ -53,18 +53,18 @@ class TestLoggerLocationIntrospector(unittest.TestCase):
         """Test module name extraction from filename."""
         # Test various filename formats
         self.assertEqual(
-            LoggerLocationIntrospector._get_module_name_from_filename("/path/to/module.py"),
+            LoggerLocationIntrospector.get_module_name_from_string("/path/to/module.py"),
             "module",
         )
         self.assertEqual(
-            LoggerLocationIntrospector._get_module_name_from_filename(r"C:\path\to\module.py"),
+            LoggerLocationIntrospector.get_module_name_from_string(r"C:\path\to\module.py"),
             "module",
         )
         self.assertEqual(
-            LoggerLocationIntrospector._get_module_name_from_filename("__main__.py"), "__main__"
+            LoggerLocationIntrospector.get_module_name_from_string("__main__.py"), "__main__"
         )
         self.assertEqual(
-            LoggerLocationIntrospector._get_module_name_from_filename("<stdin>"), "__interactive__"
+            LoggerLocationIntrospector.get_module_name_from_string("<stdin>"), "__interactive__"
         )
 
 

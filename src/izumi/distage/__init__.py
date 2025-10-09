@@ -22,6 +22,7 @@ from .injector import Injector
 from .locator_base import Locator
 from .model import Binding, DependencyGraph, Id, InstanceKey, Plan
 from .planner_input import PlannerInput
+from .roles import EntrypointArgs, RoleAppMain, RoleDescriptor, RoleService, RoleTask
 from .roots import Roots
 from .subcontext import Subcontext
 from .tag import Tag
@@ -74,4 +75,9 @@ __all__ = [
     "Factory",
     "Functoid",
     "Subcontext",
+    "RoleService",
+    "RoleTask",
+    "RoleDescriptor",
+    "EntrypointArgs",
+    "RoleAppMain",
 ]

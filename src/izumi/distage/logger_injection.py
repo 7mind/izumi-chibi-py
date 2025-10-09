@@ -57,13 +57,12 @@ class LoggerLocationIntrospector:
                 if frame_function_name == "__init__":
                     # For constructors, try to get a more specific name including the class
                     class_name = LoggerLocationIntrospector._get_class_name_from_frame(check_frame)
-                    module_name = LoggerLocationIntrospector._get_module_name_from_filename(
+                    module_name = LoggerLocationIntrospector.get_module_name_from_string(
                         frame_filename
                     )
                     if class_name:
                         return f"{module_name}.{class_name}"
-                    else:
-                        return LoggerLocationIntrospector._extract_location_from_frame(check_frame)
+                    return LoggerLocationIntrospector._extract_location_from_frame(check_frame)
 
             # If no constructor found, look for other meaningful user code
             for check_frame in frames_to_check:
@@ -96,7 +95,7 @@ class LoggerLocationIntrospector:
         function_name = code.co_name
 
         # Try to get the module name from the filename
-        module_name = LoggerLocationIntrospector._get_module_name_from_filename(filename)
+        module_name = LoggerLocationIntrospector.get_module_name_from_string(filename)
 
         # Check if we're inside a class method
         class_name = LoggerLocationIntrospector._get_class_name_from_frame(frame)
@@ -107,7 +106,7 @@ class LoggerLocationIntrospector:
             return f"{module_name}.{function_name}"
 
     @staticmethod
-    def _get_module_name_from_filename(filename: str) -> str:
+    def get_module_name_from_string(filename: str) -> str:
         """Extract module name from a filename."""
         # Handle different path separators by normalizing path
         import os
@@ -133,7 +132,6 @@ class LoggerLocationIntrospector:
     @staticmethod
     def _get_class_name_from_frame(frame: FrameType) -> str | None:
         """Try to determine if we're inside a class method and get the class name."""
-        # Look for 'self' or 'cls' parameters
         local_vars = frame.f_locals
 
         if "self" in local_vars:
@@ -144,15 +142,16 @@ class LoggerLocationIntrospector:
             if inspect.isclass(cls_obj):
                 return cls_obj.__name__
 
-        # Try to get class name from code context (less reliable)
         code = frame.f_code
         if code.co_varnames and len(code.co_varnames) > 0:
             first_param = code.co_varnames[0]
-            if first_param in ["self", "cls"] and first_param in local_vars:
+            if first_param == "self" and first_param in local_vars:
                 obj = local_vars[first_param]
                 if hasattr(obj, "__class__"):
                     return str(obj.__class__.__name__)
-                elif inspect.isclass(obj):
+            elif first_param == "cls" and first_param in local_vars:
+                obj = local_vars[first_param]
+                if inspect.isclass(obj):
                     return str(obj.__name__)
 
         return None

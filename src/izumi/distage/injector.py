@@ -220,10 +220,25 @@ class Injector:
             except ValueError:
                 # Check if this is an auto-injectable logger
                 if AutoLoggerManager.should_auto_inject_logger(dep_key):
-                    # Create an appropriate logger as fallback
-                    from .logger_injection import LoggerLocationIntrospector
+                    # Get the target class that's requesting the logger
+                    target_key = operation.key()
+                    target_class = target_key.target_type
 
-                    logger_name = LoggerLocationIntrospector.get_logger_location_name()
+                    # Determine logger name from target class
+                    if hasattr(target_class, "__name__"):
+                        from .logger_injection import LoggerLocationIntrospector
+
+                        module_name = LoggerLocationIntrospector.get_module_name_from_string(
+                            target_class.__module__
+                            if hasattr(target_class, "__module__")
+                            else "__unknown__"
+                        )
+                        logger_name = f"{module_name}.{target_class.__name__}"
+                    else:
+                        from .logger_injection import LoggerLocationIntrospector
+
+                        logger_name = LoggerLocationIntrospector.get_logger_location_name()
+
                     resolved_deps[dep_key] = logging.getLogger(logger_name)
                 else:
                     # Re-raise the original error for non-logger dependencies

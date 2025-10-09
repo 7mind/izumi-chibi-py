@@ -62,6 +62,10 @@ class ModuleDef:
         """Create a subcontext builder for the given type."""
         return SubcontextBuilder(target_type, self)
 
+    def makeRole(self, role_type: type) -> None:
+        """Create a role binding for a role class that implements RoleService or RoleTask."""
+        self.make(role_type).using().type(role_type)  # pyright: ignore[reportUnknownMemberType]
+
 
 class BindingBuilder[T]:
     """Builder for creating bindings."""
