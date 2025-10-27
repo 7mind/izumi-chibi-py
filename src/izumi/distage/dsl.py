@@ -52,7 +52,7 @@ class ModuleDef:
         new_lookup_operations = self.lookup_operations + [lookup_op]
         object.__setattr__(self, "lookup_operations", new_lookup_operations)
 
-    def _get_next_set_element_counter(self, target_type: type) -> int:
+    def get_next_set_element_counter(self, target_type: type) -> int:
         """Get and increment the counter for a specific set type."""
         current = self._set_element_counters.get(target_type, 0)
         self._set_element_counters[target_type] = current + 1
@@ -193,7 +193,7 @@ class SetBindingBuilder[T]:
 
     def _generate_element_name(self) -> str:
         """Generate a unique name for set element."""
-        counter = self._module._get_next_set_element_counter(self._target_type)
+        counter = self._module.get_next_set_element_counter(self._target_type)
         return f"set-element-{counter}"
 
     def add(self, instance: T) -> SetBindingBuilder[T]:
