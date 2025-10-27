@@ -169,6 +169,47 @@ class TestSetBindings(unittest.TestCase):
         self.assertIn(handler1, service.handlers)
         self.assertIn(handler2, service.handlers)
 
+    def test_multiple_many_calls_add_all_elements(self):
+        """Test that calling module.many() multiple times adds all elements to the set."""
+
+        class CommandHandler:
+            def __init__(self, name: str):
+                self.name = name
+
+            def __eq__(self, other):
+                return isinstance(other, CommandHandler) and self.name == other.name
+
+            def __hash__(self):
+                return hash(self.name)
+
+        class UserHandler(CommandHandler):
+            def __init__(self):
+                super().__init__("user")
+
+        class AdminHandler(CommandHandler):
+            def __init__(self):
+                super().__init__("admin")
+
+        class Service:
+            def __init__(self, handlers: set[CommandHandler]):
+                self.handlers = handlers
+
+        module = ModuleDef()
+        # This is the pattern that might fail - calling module.many() separately
+        module.many(CommandHandler).add_type(UserHandler)
+        module.many(CommandHandler).add_type(AdminHandler)
+        module.make(Service).using().type(Service)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(Service))
+
+        # Both handlers should be in the set
+        self.assertEqual(len(service.handlers), 2, "Expected 2 handlers in the set")
+        handler_names = {h.name for h in service.handlers}
+        self.assertIn("user", handler_names)
+        self.assertIn("admin", handler_names)
+
 
 class TestSignatureIntrospection(unittest.TestCase):
     """Test signature introspection functionality."""

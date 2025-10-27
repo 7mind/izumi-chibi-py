@@ -32,11 +32,13 @@ class ModuleDef:
 
     bindings: list[Binding]
     lookup_operations: list[Any]
+    _set_element_counters: dict[type, int]
 
     def __init__(self) -> None:
         # Use object.__setattr__ since we're frozen
         object.__setattr__(self, "bindings", [])
         object.__setattr__(self, "lookup_operations", [])
+        object.__setattr__(self, "_set_element_counters", {})
 
     def add_binding(self, binding: Binding) -> None:
         """Add a binding to this module."""
@@ -49,6 +51,12 @@ class ModuleDef:
         # Since we're frozen, we need to create a new list
         new_lookup_operations = self.lookup_operations + [lookup_op]
         object.__setattr__(self, "lookup_operations", new_lookup_operations)
+
+    def _get_next_set_element_counter(self, target_type: type) -> int:
+        """Get and increment the counter for a specific set type."""
+        current = self._set_element_counters.get(target_type, 0)
+        self._set_element_counters[target_type] = current + 1
+        return current
 
     def make(self, target_type: type[T] | Any) -> BindingBuilder[T]:
         """Create a binding builder for the given type."""
@@ -182,13 +190,11 @@ class SetBindingBuilder[T]:
     def __init__(self, target_type: type[T], module: ModuleDef):
         self._target_type = target_type
         self._module = module
-        self._element_counter = 0
 
     def _generate_element_name(self) -> str:
         """Generate a unique name for set element."""
-        name = f"set-element-{self._element_counter}"
-        self._element_counter += 1
-        return name
+        counter = self._module._get_next_set_element_counter(self._target_type)
+        return f"set-element-{counter}"
 
     def add(self, instance: T) -> SetBindingBuilder[T]:
         """Add an instance to the set (backward compatibility)."""
