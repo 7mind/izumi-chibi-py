@@ -82,7 +82,7 @@ class BindingBuilder[T]:
         self._target_type = target_type
         self._module = module
         self._name: str | None = None
-        self._tag: Tag | None = None  # Keep for activation system
+        self._tags: set[Tag] = set()  # Store multiple tags for activation system
 
     def named(self, name: str) -> BindingBuilder[T]:
         """Add a name to this binding."""
@@ -90,8 +90,8 @@ class BindingBuilder[T]:
         return self
 
     def tagged(self, tag: Tag) -> BindingBuilder[T]:
-        """Add a tag to this binding (for activation system)."""
-        self._tag = tag
+        """Add a tag to this binding (for activation system). Can be called multiple times."""
+        self._tags.add(tag)
         return self
 
     def aliased(self, alias_key: InstanceKey) -> BindingBuilder[T]:
@@ -110,13 +110,14 @@ class BindingBuilder[T]:
             # Create the original binding
             key = InstanceKey(self._target_type, self._name)
 
-            # Convert tag to activation_tags if it's an AxisChoiceDef
+            # Convert tags to activation_tags if they're AxisChoiceDefs
             activation_tags: set[Any] = set()
-            if self._tag is not None:
+            if self._tags:
                 from .activation import AxisChoiceDef
 
-                if isinstance(self._tag, AxisChoiceDef):
-                    activation_tags.add(self._tag)
+                for tag in self._tags:
+                    if isinstance(tag, AxisChoiceDef):
+                        activation_tags.add(tag)
 
             # Check if this is a Factory[T] binding
             is_factory = False
@@ -156,13 +157,14 @@ class BindingBuilder[T]:
                 # Original finalize logic
                 key = InstanceKey(self._target_type, self._name)
 
-                # Convert tag to activation_tags if it's an AxisChoiceDef
+                # Convert tags to activation_tags if they're AxisChoiceDefs
                 activation_tags: set[Any] = set()
-                if self._tag is not None:
+                if self._tags:
                     from .activation import AxisChoiceDef
 
-                    if isinstance(self._tag, AxisChoiceDef):
-                        activation_tags.add(self._tag)
+                    for tag in self._tags:
+                        if isinstance(tag, AxisChoiceDef):
+                            activation_tags.add(tag)
 
                 # Check if this is a Factory[T] binding
                 is_factory = False

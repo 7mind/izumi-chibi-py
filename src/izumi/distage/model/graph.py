@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..activation import Activation
+from ..activation_context import ActivationContext
 from .bindings import Binding
 from .keys import InstanceKey, SetElementKey
 from .operations import CreateFactory, CreateSet, ExecutableOp, Lookup, Provide
@@ -402,7 +403,12 @@ class DependencyGraph:
         self._bindings = filtered_bindings
 
     def filter_bindings_by_activation(self, activation: Activation) -> None:
-        """Filter bindings based on activation, selecting the best match for each key."""
+        """
+        Filter bindings based on activation, selecting the best match for each key.
+
+        DEPRECATED: This method uses simple filtering without path-aware tracing.
+        Use filter_bindings_by_activation_traced for sound axis resolution.
+        """
         filtered_bindings = {}
         for type_key, alternatives in self._alternative_bindings.items():
             # Find the best matching binding for this type
@@ -417,6 +423,104 @@ class DependencyGraph:
 
         self._bindings = filtered_bindings
         self._validated = False
+
+    def filter_bindings_by_activation_traced(
+        self, activation: Activation, roots: set[InstanceKey]
+    ) -> None:
+        """
+        Filter bindings using path-aware tracing from roots.
+
+        This implements the sound activation resolution from the original distage:
+        - Start from roots and traverse dependencies
+        - Track activation context (user choices + implied choices from selected bindings)
+        - Resolve conflicts at each step considering the current path's context
+        - Only include bindings that are reachable with valid activation
+        """
+        context = ActivationContext.from_activation(activation)
+        visited: set[InstanceKey] = set()
+        selected_bindings: dict[InstanceKey, Binding] = {}
+
+        def trace_dependencies(key: InstanceKey, current_context: ActivationContext) -> None:
+            """Recursively trace dependencies from a key with the given context."""
+            if key in visited:
+                return
+            visited.add(key)
+
+            # Find the type key for this instance key
+            type_key = InstanceKey(key.target_type, None)
+
+            # Get alternative bindings for this type
+            alternatives = self._alternative_bindings.get(type_key, [])
+
+            if not alternatives:
+                # No alternatives, check if we have a direct binding
+                if key in self._bindings:
+                    selected_bindings[key] = self._bindings[key]
+                return
+
+            # Resolve conflict using current context
+            best_binding = self._select_best_binding_traced(alternatives, current_context)
+
+            if best_binding:
+                # Store the selected binding for the untagged type key
+                selected_bindings[type_key] = best_binding
+                # Also store for the binding's actual key if it's different from type_key
+                # (e.g., if it has a name)
+                if best_binding.key != type_key:
+                    selected_bindings[best_binding.key] = best_binding
+
+                # Extend context with tags from selected binding
+                extended_context = current_context.with_binding_tags(best_binding)
+
+                # Trace dependencies of this binding
+                # Get dependencies from Functoid using keys() method
+                for dep_key in best_binding.functoid.keys():
+                    if isinstance(dep_key, InstanceKey):
+                        trace_dependencies(dep_key, extended_context)
+
+        # Trace from each root
+        for root_key in roots:
+            trace_dependencies(root_key, context)
+
+        # Also trace set bindings and their elements
+        for set_key, bindings in self._set_bindings.items():
+            if set_key in roots or set_key in visited:
+                for binding in bindings:
+                    if context.is_binding_valid(binding):
+                        if isinstance(binding.key, SetElementKey):
+                            element_key = binding.key.element_key
+                            trace_dependencies(element_key, context)
+
+        # Update bindings to only include selected ones
+        self._bindings = selected_bindings
+        self._validated = False
+
+    def _select_best_binding_traced(
+        self, bindings: list[Binding], context: ActivationContext
+    ) -> Binding | None:
+        """Select the best binding from alternatives based on activation context."""
+        if not bindings:
+            return None
+
+        if len(bindings) == 1:
+            binding = bindings[0]
+            return binding if context.is_binding_valid(binding) else None
+
+        # Filter bindings that are valid in this context
+        valid_bindings = [b for b in bindings if context.is_binding_valid(b)]
+
+        if not valid_bindings:
+            # If no bindings are valid, prefer untagged bindings as defaults
+            untagged_bindings = [b for b in bindings if not b.activation_tags]
+            return untagged_bindings[0] if untagged_bindings else None
+
+        if len(valid_bindings) == 1:
+            return valid_bindings[0]
+
+        # If multiple bindings are valid, prefer more specific ones (more tags)
+        # A binding is more specific if it has more axis choices configured
+        valid_bindings.sort(key=lambda b: len(b.activation_tags or set()), reverse=True)  # pyright: ignore[reportUnknownArgumentType]
+        return valid_bindings[0]
 
     def _select_best_binding(
         self, bindings: list[Binding], activation: Activation

@@ -149,13 +149,22 @@ class Injector:
                 for lookup_op in module.lookup_operations:
                     graph.add_lookup_operation(lookup_op)
 
-        # Filter bindings based on activation
+        # Filter bindings based on activation using tracing
         if not input.activation.choices:
             # No activation specified, keep all bindings
             pass
         else:
-            # Filter bindings that don't match the activation
-            graph.filter_bindings_by_activation(input.activation)
+            # Determine root keys for tracing
+            if input.roots.is_everything():
+                # For everything roots, we need to trace from all top-level bindings
+                # Use all bindings as potential roots
+                root_keys = set(graph.get_all_bindings().keys())
+            else:
+                # Use specified roots
+                root_keys = set(input.roots.keys)
+
+            # Filter bindings using path-aware tracing
+            graph.filter_bindings_by_activation_traced(input.activation, root_keys)
 
         # If we have a parent locator, we need to be more lenient with validation
         # because missing dependencies might be available from the parent
