@@ -10,6 +10,7 @@ A Python re-implementation of some core concepts from Scala's [Izumi Project](ht
 The port was done by guiding Claude with thorough manual reviews.
 
 At this point the project is not battle-tested. Expect dragons, landmines and varying mileage.
+Currently it powers just a couple of small private tools.
 
 ## Other generic DI implementations for Python
 
