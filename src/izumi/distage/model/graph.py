@@ -402,28 +402,6 @@ class DependencyGraph:
                 filtered_bindings[key] = binding
         self._bindings = filtered_bindings
 
-    def filter_bindings_by_activation(self, activation: Activation) -> None:
-        """
-        Filter bindings based on activation, selecting the best match for each key.
-
-        DEPRECATED: This method uses simple filtering without path-aware tracing.
-        Use filter_bindings_by_activation_traced for sound axis resolution.
-        """
-        filtered_bindings = {}
-        for type_key, alternatives in self._alternative_bindings.items():
-            # Find the best matching binding for this type
-            best_binding = self._select_best_binding(alternatives, activation)
-            if best_binding:
-                # Store the best binding for the untagged type key (what dependents will request)
-                filtered_bindings[type_key] = best_binding
-                # Also store it for any specific tagged keys that exist
-                for binding in alternatives:
-                    if isinstance(binding.key, InstanceKey) and binding.key in self._bindings:
-                        filtered_bindings[binding.key] = best_binding
-
-        self._bindings = filtered_bindings
-        self._validated = False
-
     def filter_bindings_by_activation_traced(
         self, activation: Activation, roots: set[InstanceKey]
     ) -> None:
@@ -466,7 +444,7 @@ class DependencyGraph:
                 selected_bindings[type_key] = best_binding
                 # Also store for the binding's actual key if it's different from type_key
                 # (e.g., if it has a name)
-                if best_binding.key != type_key:
+                if isinstance(best_binding.key, InstanceKey) and best_binding.key != type_key:
                     selected_bindings[best_binding.key] = best_binding
 
                 # Extend context with tags from selected binding
@@ -474,9 +452,8 @@ class DependencyGraph:
 
                 # Trace dependencies of this binding
                 # Get dependencies from Functoid using keys() method
-                for dep_key in best_binding.functoid.keys():
-                    if isinstance(dep_key, InstanceKey):
-                        trace_dependencies(dep_key, extended_context)
+                for dep_key in best_binding.functoid.keys():  # noqa: SIM118
+                    trace_dependencies(dep_key, extended_context)
 
         # Trace from each root
         for root_key in roots:
@@ -486,10 +463,9 @@ class DependencyGraph:
         for set_key, bindings in self._set_bindings.items():
             if set_key in roots or set_key in visited:
                 for binding in bindings:
-                    if context.is_binding_valid(binding):
-                        if isinstance(binding.key, SetElementKey):
-                            element_key = binding.key.element_key
-                            trace_dependencies(element_key, context)
+                    if context.is_binding_valid(binding) and isinstance(binding.key, SetElementKey):
+                        element_key = binding.key.element_key
+                        trace_dependencies(element_key, context)
 
         # Update bindings to only include selected ones
         self._bindings = selected_bindings

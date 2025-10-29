@@ -139,7 +139,7 @@ class ActivationContext:
     def _find_axis_for_tag(self, tag: AxisChoiceDef) -> type[Axis] | None:
         """Find which axis type a tag belongs to."""
         # First check user activation's axes
-        for axis_type, choice in self.user_activation.choices.items():
+        for axis_type in self.user_activation.choices:
             if self._tag_belongs_to_axis(tag, axis_type):
                 return axis_type
 
@@ -148,18 +148,18 @@ class ActivationContext:
         # an axis we've encountered during traversal
         for implied_tag in self.implied_choices:
             # Try to find the axis for this implied tag
-            for axis_type in self.user_activation.choices.keys():
-                if self._tag_belongs_to_axis(implied_tag, axis_type):
-                    # Check if the original tag also belongs to this axis
-                    if self._tag_belongs_to_axis(tag, axis_type):
-                        return axis_type
+            for axis_type in self.user_activation.choices:
+                if self._tag_belongs_to_axis(implied_tag, axis_type) and self._tag_belongs_to_axis(
+                    tag, axis_type
+                ):
+                    return axis_type
 
         # Fallback: check StandardAxis for backward compatibility
         from .activation import StandardAxis
 
         for axis_name in ["Mode", "Repo", "World"]:
             if hasattr(StandardAxis, axis_name):
-                axis_class = getattr(StandardAxis, axis_name)
+                axis_class: type[Axis] = getattr(StandardAxis, axis_name)
                 if self._tag_belongs_to_axis(tag, axis_class):
                     return axis_class
 
