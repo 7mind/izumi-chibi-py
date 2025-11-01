@@ -15,16 +15,16 @@ Currently it powers just a couple of small private tools.
 
 ## Comparison with Other Python DI Libraries
 
-| Library | Stars | Non-invasive | Staged DI | Config Axes | Subcontexts | Async | Lifecycle | Factory | Type Safety | Maintenance |
-|---------|-------|--------------|-----------|-------------|-------------|-------|-----------|---------|-------------|-------------|
-| **chibi-izumi** | - | ✅ | ✅ | ✅ Activations | ✅ | ✅ | ✅ | ✅ | ✅ | Active |
-| [dishka](https://github.com/reagento/dishka) | ~900 | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | Active |
-| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ~4.6k | ⚠️ Decorators | ❌ | ⚠️ Overrides | ❌ | ✅ | ✅ | ✅ | ✅ | Active (2025) |
-| [injector](https://github.com/alecthomas/injector) | ~1.5k | ✅ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ✅ | Active |
-| [inject](https://github.com/ivankorobkov/python-inject) | ~740 | ⚠️ Decorators | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | Maintenance |
-| [punq](https://github.com/bobthemighty/punq) | ~400 | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ | Active |
-| [lagom](https://github.com/meadsteve/lagom) | ~250 | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ | Active |
-| [wireup](https://github.com/maldoinc/wireup) | ~220 | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ | Active |
+| Library | Non-invasive | Staged DI | Config Axes | Subcontexts | Async | Lifecycle | Factory | Type Safety | Maintenance |
+|---------|--------------|-----------|-------------|-------------|-------|-----------|---------|-------------|-------------|
+| **chibi-izumi** | ✅ | ✅ | ✅ Activations | ✅ | ✅ | ✅ | ✅ | ✅ | Active |
+| [dishka](https://github.com/reagento/dishka) | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | Active |
+| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ⚠️ Decorators | ❌ | ⚠️ Overrides | ❌ | ✅ | ✅ | ✅ | ✅ | Active (2025) |
+| [injector](https://github.com/alecthomas/injector) | ✅ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ✅ | Active |
+| [inject](https://github.com/ivankorobkov/python-inject) | ⚠️ Decorators | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | Maintenance |
+| [punq](https://github.com/bobthemighty/punq) | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ | Active |
+| [lagom](https://github.com/meadsteve/lagom) | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ | Active |
+| [wireup](https://github.com/maldoinc/wireup) | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ | Active |
 
 **Legend:**
 - ✅ Full support
