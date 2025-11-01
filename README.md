@@ -17,11 +17,11 @@ Currently it powers just a couple of small private tools.
 
 | Library | Non-invasive | Staged DI | Config Axes | Subcontexts | Async | Lifecycle | Factory | Type Safety | Maintenance |
 |---------|--------------|-----------|-------------|-------------|-------|-----------|---------|-------------|-------------|
-| **chibi-izumi** | ✅ | ✅ | ✅ Activations | ✅ | ✅ | ✅ | ✅ | ✅ | Active |
+| **chibi-izumi** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Active |
 | [dishka](https://github.com/reagento/dishka) | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | Active |
-| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ⚠️ Decorators | ❌ | ⚠️ Overrides | ❌ | ✅ | ✅ | ✅ | ✅ | Active (2025) |
+| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ⚠️ | ❌ | ⚠️ Overrides | ❌ | ✅ | ✅ | ✅ | ✅ | Active (2025) |
 | [injector](https://github.com/alecthomas/injector) | ✅ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ✅ | Active |
-| [inject](https://github.com/ivankorobkov/python-inject) | ⚠️ Decorators | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | Maintenance |
+| [inject](https://github.com/ivankorobkov/python-inject) | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | Maintenance |
 | [punq](https://github.com/bobthemighty/punq) | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ | Active |
 | [lagom](https://github.com/meadsteve/lagom) | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ | Active |
 | [wireup](https://github.com/maldoinc/wireup) | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ | Active |
