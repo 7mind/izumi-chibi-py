@@ -18,8 +18,8 @@ Currently it powers just a couple of small private tools.
 | Library | GitHub Stars | Design | Staged DI | Config Axes | Async | Lifecycle | Factory | Type Safety | Maintainence |
 |---------|--------------|--------|-----------|-------------|-------|-----------|---------|-------------|--------------|
 | **chibi-izumi** | - | Non-invasive | ✅ Yes | ✅ Yes (Activations) | ✅ Full | ✅ Resource | ✅ Yes | ✅ Full | Active |
+| [dishka](https://github.com/reagento/dishka) | ~900 | Non-invasive | ✅ Yes | ❌ Scopes only | ✅ Yes | ✅ Finalization | ✅ Yes | ✅ Good | Active |
 | [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ~4.6k | Decorator-based | ❌ Single-pass | ⚠️ Override-based | ✅ Coroutines | ✅ Resource | ✅ Yes | ✅ Good | Active (2025) |
-| [dishka](https://github.com/reagento/dishka) | ~900 | Non-invasive | ⚠️ Unclear | ❌ Scopes only | ✅ Yes | ✅ Finalization | ✅ Yes | ✅ Good | Active |
 | [injector](https://github.com/alecthomas/injector) | ~1.5k | Non-invasive | ❌ Single-pass | ❌ No | ⚠️ Unclear | ⚠️ Scopes | ✅ Yes | ✅ mypy | Active |
 | [inject](https://github.com/ivankorobkov/python-inject) | ~740 | Decorator-based | ❌ Single-pass | ❌ No | ❌ No | ❌ No | ⚠️ Limited | ⚠️ Limited | Maintenance |
 | [punq](https://github.com/bobthemighty/punq) | ~400 | IoC Container | ❌ Single-pass | ❌ No | ❌ No | ⚠️ Scopes | ✅ Yes | ✅ Good | Active |
