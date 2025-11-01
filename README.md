@@ -15,16 +15,16 @@ Currently it powers just a couple of small private tools.
 
 ## Comparison with Other Python DI Libraries
 
-| Library | Non-invasive | Staged DI | Config Axes | Subcontexts | Async | Lifecycle | Factory | Type Safety | Maintenance |
-|---------|--------------|-----------|-------------|-------------|-------|-----------|---------|-------------|-------------|
-| **chibi-izumi** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Active |
-| [dishka](https://github.com/reagento/dishka) | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | Active |
-| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ⚠️ | ❌ | ⚠️ | ❌ | ✅ | ✅ | ✅ | ✅ | Active (2025) |
-| [injector](https://github.com/alecthomas/injector) | ✅ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ✅ | Active |
-| [inject](https://github.com/ivankorobkov/python-inject) | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | Maintenance |
-| [punq](https://github.com/bobthemighty/punq) | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ | Active |
-| [lagom](https://github.com/meadsteve/lagom) | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ | Active |
-| [wireup](https://github.com/maldoinc/wireup) | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ | Active |
+| Library | Non-invasive | Staged DI | Config Axes | Subcontexts | Async | Lifecycle | Factory | Type Safety |
+|---------|--------------|-----------|-------------|-------------|-------|-----------|---------|-------------|
+| **chibi-izumi** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [dishka](https://github.com/reagento/dishka) | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ⚠️ | ❌ | ⚠️ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| [injector](https://github.com/alecthomas/injector) | ✅ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ✅ |
+| [inject](https://github.com/ivankorobkov/python-inject) | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ |
+| [punq](https://github.com/bobthemighty/punq) | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ |
+| [lagom](https://github.com/meadsteve/lagom) | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ |
+| [wireup](https://github.com/maldoinc/wireup) | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ |
 
 **Legend:**
 - ✅ Full support
