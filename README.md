@@ -13,11 +13,34 @@ The port was done by guiding Claude with thorough manual reviews.
 At this point the project is not battle-tested. Expect dragons, landmines and varying mileage.
 Currently it powers just a couple of small private tools.
 
-## Other generic DI implementations for Python
+## Comparison with Other Python DI Libraries
 
-1. [dishka](https://github.com/reagento/dishka) - staged dependency injection, no explicit support for configurability (axes)
-2. [dependency_injector](https://pypi.org/project/dependency-injector/) - single-pass, no explicit support for configurability (axes)
-3. [inject](https://pypi.org/project/inject/) - invasive, based on decorators, single-pass, no explicit support for configurability (axes)
+| Library | GitHub Stars | Design | Staged DI | Config Axes | Async | Lifecycle | Factory | Type Safety | Maintainence |
+|---------|--------------|--------|-----------|-------------|-------|-----------|---------|-------------|--------------|
+| **chibi-izumi** | - | Non-invasive | ✅ Yes | ✅ Yes (Activations) | ✅ Full | ✅ Resource | ✅ Yes | ✅ Full | Active |
+| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ~4.6k | Decorator-based | ❌ Single-pass | ⚠️ Override-based | ✅ Coroutines | ✅ Resource | ✅ Yes | ✅ Good | Active (2025) |
+| [dishka](https://github.com/reagento/dishka) | ~900 | Non-invasive | ⚠️ Unclear | ❌ Scopes only | ✅ Yes | ✅ Finalization | ✅ Yes | ✅ Good | Active |
+| [injector](https://github.com/alecthomas/injector) | ~1.5k | Non-invasive | ❌ Single-pass | ❌ No | ⚠️ Unclear | ⚠️ Scopes | ✅ Yes | ✅ mypy | Active |
+| [inject](https://github.com/ivankorobkov/python-inject) | ~740 | Decorator-based | ❌ Single-pass | ❌ No | ❌ No | ❌ No | ⚠️ Limited | ⚠️ Limited | Maintenance |
+| [punq](https://github.com/bobthemighty/punq) | ~400 | IoC Container | ❌ Single-pass | ❌ No | ❌ No | ⚠️ Scopes | ✅ Yes | ✅ Good | Active |
+| [lagom](https://github.com/meadsteve/lagom) | ~250 | Type-based | ❌ Single-pass | ❌ No | ✅ Yes | ⚠️ Scopes | ✅ Yes | ✅ Good | Active |
+| [wireup](https://github.com/maldoinc/wireup) | ~220 | Non-invasive | ❌ Single-pass | ❌ No | ✅ Yes | ⚠️ Limited | ✅ Yes | ✅ Strong | Active |
+
+**Legend:**
+- ✅ Fully supported
+- ⚠️ Partially supported or unclear
+- ❌ Not supported or not documented
+
+**Key Differentiators of chibi-izumi:**
+
+1. **Staged Dependency Injection**: Multi-pass resolution allows validation before instantiation
+2. **Configuration Axes (Activations)**: Explicitly choose between implementations based on environment/mode (prod/test/etc.)
+3. **Comprehensive Async**: Full async/await support for factories, lifecycle, and execution
+4. **Resource Management**: Automatic acquisition and cleanup with guaranteed LIFO release
+5. **Non-invasive**: No decorators or base classes required in business logic
+6. **Roles**: Multi-tenant application support with selective entrypoint execution
+
+Most other libraries focus on single-pass injection and use scopes/overrides instead of explicit configuration axes.
 
 ## Features
 
