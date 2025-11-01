@@ -3,6 +3,7 @@
 [![CI](https://github.com/7mind/izumi-chibi-py/actions/workflows/ci.yml/badge.svg)](https://github.com/7mind/izumi-chibi-py/actions/workflows/ci.yml)
 [![PyPI version](https://badge.fury.io/py/chibi-izumi.svg)](https://badge.fury.io/py/chibi-izumi)
 [![codecov](https://codecov.io/gh/7mind/izumi-chibi-py/graph/badge.svg)](https://codecov.io/gh/7mind/izumi-chibi-py)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A Python re-implementation of some core concepts from Scala's [Izumi Project](https://github.com/7mind/izumi),
 `distage` staged dependency injection library in particular.
