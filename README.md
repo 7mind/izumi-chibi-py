@@ -19,7 +19,7 @@ Currently it powers just a couple of small private tools.
 |---------|--------------|-----------|-------------|-------------|-------|-----------|---------|-------------|-------------|
 | **chibi-izumi** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Active |
 | [dishka](https://github.com/reagento/dishka) | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | Active |
-| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ⚠️ | ❌ | ⚠️ Overrides | ❌ | ✅ | ✅ | ✅ | ✅ | Active (2025) |
+| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ⚠️ | ❌ | ⚠️ | ❌ | ✅ | ✅ | ✅ | ✅ | Active (2025) |
 | [injector](https://github.com/alecthomas/injector) | ✅ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ✅ | Active |
 | [inject](https://github.com/ivankorobkov/python-inject) | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | Maintenance |
 | [punq](https://github.com/bobthemighty/punq) | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ | Active |
