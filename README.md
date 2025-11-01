@@ -15,21 +15,21 @@ Currently it powers just a couple of small private tools.
 
 ## Comparison with Other Python DI Libraries
 
-| Library | GitHub Stars | Design | Staged DI | Config Axes | Async | Lifecycle | Factory | Type Safety | Maintainence |
-|---------|--------------|--------|-----------|-------------|-------|-----------|---------|-------------|--------------|
-| **chibi-izumi** | - | Non-invasive | ✅ Yes | ✅ Yes (Activations) | ✅ Full | ✅ Resource | ✅ Yes | ✅ Full | Active |
-| [dishka](https://github.com/reagento/dishka) | ~900 | Non-invasive | ✅ Yes | ❌ Scopes only | ✅ Yes | ✅ Finalization | ✅ Yes | ✅ Good | Active |
-| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ~4.6k | Decorator-based | ❌ Single-pass | ⚠️ Override-based | ✅ Coroutines | ✅ Resource | ✅ Yes | ✅ Good | Active (2025) |
-| [injector](https://github.com/alecthomas/injector) | ~1.5k | Non-invasive | ❌ Single-pass | ❌ No | ⚠️ Unclear | ⚠️ Scopes | ✅ Yes | ✅ mypy | Active |
-| [inject](https://github.com/ivankorobkov/python-inject) | ~740 | Decorator-based | ❌ Single-pass | ❌ No | ❌ No | ❌ No | ⚠️ Limited | ⚠️ Limited | Maintenance |
-| [punq](https://github.com/bobthemighty/punq) | ~400 | IoC Container | ❌ Single-pass | ❌ No | ❌ No | ⚠️ Scopes | ✅ Yes | ✅ Good | Active |
-| [lagom](https://github.com/meadsteve/lagom) | ~250 | Type-based | ❌ Single-pass | ❌ No | ✅ Yes | ⚠️ Scopes | ✅ Yes | ✅ Good | Active |
-| [wireup](https://github.com/maldoinc/wireup) | ~220 | Non-invasive | ❌ Single-pass | ❌ No | ✅ Yes | ⚠️ Limited | ✅ Yes | ✅ Strong | Active |
+| Library | Stars | Non-invasive | Staged DI | Config Axes | Subcontexts | Async | Lifecycle | Factory | Type Safety | Maintenance |
+|---------|-------|--------------|-----------|-------------|-------------|-------|-----------|---------|-------------|-------------|
+| **chibi-izumi** | - | ✅ | ✅ | ✅ Activations | ✅ | ✅ | ✅ | ✅ | ✅ | Active |
+| [dishka](https://github.com/reagento/dishka) | ~900 | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | Active |
+| [dependency-injector](https://github.com/ets-labs/python-dependency-injector) | ~4.6k | ⚠️ Decorators | ❌ | ⚠️ Overrides | ❌ | ✅ | ✅ | ✅ | ✅ | Active (2025) |
+| [injector](https://github.com/alecthomas/injector) | ~1.5k | ✅ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ✅ | Active |
+| [inject](https://github.com/ivankorobkov/python-inject) | ~740 | ⚠️ Decorators | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | Maintenance |
+| [punq](https://github.com/bobthemighty/punq) | ~400 | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ | Active |
+| [lagom](https://github.com/meadsteve/lagom) | ~250 | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ | Active |
+| [wireup](https://github.com/maldoinc/wireup) | ~220 | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ✅ | Active |
 
 **Legend:**
-- ✅ Fully supported
-- ⚠️ Partially supported or unclear
-- ❌ Not supported or not documented
+- ✅ Full support
+- ⚠️ Partial/limited
+- ❌ Not supported
 
 **Key Differentiators of chibi-izumi:**
 
