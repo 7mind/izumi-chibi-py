@@ -4,6 +4,7 @@ Injector - Stateless dependency injection container that produces Plans from Pla
 
 from __future__ import annotations
 
+import inspect
 import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
@@ -134,6 +135,57 @@ class Injector:
 
         return LocatorImpl(plan, instances, self._parent_locator)
 
+    async def produce_async(self, plan: Plan) -> Any:  # Returns AsyncLocator
+        """
+        Create an AsyncLocator by instantiating all dependencies in the Plan,
+        supporting async operations and lifecycle management.
+
+        This method handles async factory functions, async lifecycle acquire,
+        and tracks resources for automatic cleanup.
+
+        Args:
+            plan: The validated Plan to execute
+
+        Returns:
+            An AsyncLocator containing all resolved instances with cleanup support
+
+        Example:
+            async with injector.produce_async(plan) as locator:
+                result = await locator.run(my_async_function)
+        """
+        instances: dict[DIKey, Any] = {}
+        lifecycle_resources: list[
+            tuple[InstanceKey, Any, Any]
+        ] = []  # [(key, instance, lifecycle), ...]
+
+        def resolve_instance(key: InstanceKey) -> Any:
+            """Resolve a dependency and return an instance."""
+            if plan.has_operation(key):
+                return instances[key]
+            else:
+                return self._parent_locator.get(key)  # pyright: ignore[reportUnknownVariableType]
+
+        # Resolve all dependencies in topological order
+        for binding_key in plan.get_execution_order():
+            assert binding_key not in instances
+            instance = await self._create_instance_async(
+                binding_key, plan, instances, resolve_instance
+            )
+            instances[binding_key] = instance
+
+            # Track lifecycle resources for cleanup
+            operations = plan.graph.get_operations()
+            operation = operations.get(binding_key)
+            if operation:
+                from .model.operations import Provide
+
+                if isinstance(operation, Provide) and operation.binding.lifecycle:
+                    lifecycle_resources.append((binding_key, instance, operation.binding.lifecycle))
+
+        from .async_locator import AsyncLocator
+
+        return AsyncLocator(plan, instances, self._parent_locator, lifecycle_resources)
+
     def _build_graph(self, input: PlannerInput) -> DependencyGraph:
         """Build the dependency graph from PlannerInput."""
         graph = DependencyGraph()
@@ -254,6 +306,83 @@ class Injector:
                     raise
 
         return operation.execute(resolved_deps)
+
+    async def _create_instance_async(
+        self,
+        key: InstanceKey,
+        plan: Plan,
+        instances: dict[DIKey, Any],  # noqa: ARG002
+        resolve_fn: Callable[[InstanceKey], Any],
+    ) -> Any:
+        """Create an instance for the given key, supporting async operations."""
+        # Get operation for this key
+        operations = plan.graph.get_operations()
+        operation = operations.get(key)
+
+        if not operation:
+            # Check parent locator if available
+            if not self._parent_locator.is_empty():
+                try:
+                    return self._parent_locator.get(key)  # pyright: ignore[reportUnknownVariableType]
+                except ValueError:
+                    pass  # Parent doesn't have it either, fall through to error
+
+            raise ValueError(f"No operation found for {key}")
+
+        return await self._execute_operation_async(operation, resolve_fn)
+
+    async def _execute_operation_async(
+        self, operation: ExecutableOp, resolve_fn: Callable[[InstanceKey], Any]
+    ) -> Any:
+        """Execute an operation with resolved dependencies, supporting async operations."""
+        from .model import CreateFactory
+
+        # Special handling for CreateFactory operations
+        if isinstance(operation, CreateFactory):
+            # Set the resolve function for the factory operation
+            operation.resolve_fn = resolve_fn
+            return operation.execute({})
+
+        # Build resolved dependencies map for other operations
+        resolved_deps: dict[InstanceKey, Any] = {}
+        for dep_key in operation.dependencies():
+            try:
+                resolved_deps[dep_key] = resolve_fn(dep_key)
+            except ValueError:
+                # Check if this is an auto-injectable logger
+                if AutoLoggerManager.should_auto_inject_logger(dep_key):
+                    # Get the target class that's requesting the logger
+                    target_key = operation.key()
+                    target_class = target_key.target_type
+
+                    # Determine logger name from target class
+                    if hasattr(target_class, "__name__"):
+                        from .logger_injection import LoggerLocationIntrospector
+
+                        module_name = LoggerLocationIntrospector.get_module_name_from_string(
+                            target_class.__module__
+                            if hasattr(target_class, "__module__")
+                            else "__unknown__"
+                        )
+                        logger_name = f"{module_name}.{target_class.__name__}"
+                    else:
+                        from .logger_injection import LoggerLocationIntrospector
+
+                        logger_name = LoggerLocationIntrospector.get_logger_location_name()
+
+                    resolved_deps[dep_key] = logging.getLogger(logger_name)
+                else:
+                    # Re-raise the original error for non-logger dependencies
+                    raise
+
+        # Execute the operation
+        result = operation.execute(resolved_deps)
+
+        # If the result is a coroutine (async operation), await it
+        if inspect.iscoroutine(result):
+            return await result
+
+        return result
 
     def create_locator_with_preresolved(
         self, plan: Plan, preresolved_deps: dict[InstanceKey, Any]

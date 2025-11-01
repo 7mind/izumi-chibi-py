@@ -49,9 +49,16 @@ jobs:
     - name: Validate README examples
       run: uv run python scripts.py readme
 
-    - name: Upload coverage to Codecov
+    - uses: bitwarden/sm-action@v2
+      with:
+        access_token: ${{ secrets.TOKEN_BITWARDEN_SM }}
+        secrets: |
+          5e21669e-48b4-49ce-82f0-b193010a2ded > TOKEN_CODECOV
+
+    - name: Upload coverage reports
       uses: codecov/codecov-action@v4
       with:
+        token: ${{ env.TOKEN_CODECOV }}
         file: ./coverage.xml
         fail_ci_if_error: false
 

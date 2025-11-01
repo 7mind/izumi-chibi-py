@@ -45,6 +45,7 @@ Chibi Izumi provides a powerful, type-safe dependency injection framework with:
 - **Locator inheritance** - Create child injectors that inherit dependencies from parent locators
 - **Roles for multi-tenant applications** - Define multiple application entrypoints as roles that can be selectively executed
 - **Lifecycle resource management** - Automatic acquisition and cleanup of resources with guaranteed release
+- **Async support** - Full support for async factory functions, async lifecycle, and async dependency execution with automatic resource cleanup
 
 
 ## Limitations
@@ -634,6 +635,133 @@ result = injector.produce_run(PlannerInput([module]), app)
 - `Lifecycle.fromFactory(factory)`: Create from a factory function without cleanup
 
 Resources are automatically managed within `locator.run()` or `injector.produce_run()` calls, ensuring proper cleanup even when errors occur.
+
+### Async Support
+
+Chibi Izumi provides comprehensive async support for modern Python applications. You can use async factory functions, async lifecycle management, and async dependency execution seamlessly:
+
+```python
+import asyncio
+from izumi.distage import Injector, Lifecycle, ModuleDef, PlannerInput, InstanceKey
+
+# Example: Async database connection
+class AsyncDatabase:
+    def __init__(self, connection_string: str):
+        self.connection_string = connection_string
+        self.connected = False
+
+    async def connect(self) -> None:
+        await asyncio.sleep(0.1)  # Simulate async connection
+        print(f"Connected to {self.connection_string}")
+        self.connected = True
+
+    async def disconnect(self) -> None:
+        await asyncio.sleep(0.1)  # Simulate async cleanup
+        print(f"Disconnected from {self.connection_string}")
+        self.connected = False
+
+    async def query(self, sql: str) -> str:
+        assert self.connected, "Not connected"
+        await asyncio.sleep(0.05)  # Simulate async query
+        return f"Result: {sql}"
+
+# Async factory function
+async def create_database(connection_string: str) -> AsyncDatabase:
+    db = AsyncDatabase(connection_string)
+    await db.connect()
+    return db
+
+# Async lifecycle with automatic cleanup
+def db_lifecycle(connection_string: str) -> Lifecycle[AsyncDatabase]:
+    async def acquire() -> AsyncDatabase:
+        db = AsyncDatabase(connection_string)
+        await db.connect()
+        return db
+
+    async def release(db: AsyncDatabase) -> None:
+        await db.disconnect()
+
+    return Lifecycle.make(acquire, release)
+
+# Configure bindings
+module = ModuleDef()
+module.make(str).using().value("postgresql://localhost:5432/mydb")
+module.make(AsyncDatabase).using().fromResource(
+    db_lifecycle("postgresql://localhost:5432/mydb")
+)
+
+# Async application logic
+async def app(db: AsyncDatabase) -> str:
+    return await db.query("SELECT * FROM users")
+
+# Use async context manager for automatic resource cleanup
+async def main():
+    injector = Injector()
+    plan = injector.plan(PlannerInput([module]))
+
+    # AsyncLocator provides automatic resource cleanup
+    async with await injector.produce_async(plan) as locator:
+        result = await locator.run(app)
+        print(result)
+    # Resources are automatically released here
+
+asyncio.run(main())
+```
+
+**Key async features:**
+
+- **Async factory functions**: Factory functions can be async and will be automatically awaited
+- **Async lifecycle**: Both `acquire` and `release` can be async functions
+- **AsyncLocator**: Async context manager ensures automatic resource cleanup
+- **Mixed sync/async**: Seamlessly mix sync and async dependencies in the same graph
+- **Automatic detection**: Framework automatically detects and handles async functions
+- **LIFO cleanup**: Async resources are released in reverse order, even if errors occur
+
+**Async Factory bindings:**
+
+```python
+import asyncio
+from izumi.distage import Factory, Injector, Lifecycle, ModuleDef, PlannerInput, InstanceKey
+
+# Reuse AsyncDatabase class from above
+class AsyncDatabase:
+    def __init__(self, connection_string: str):
+        self.connection_string = connection_string
+        self.connected = False
+
+    async def connect(self) -> None:
+        await asyncio.sleep(0.1)
+        self.connected = True
+
+# Async factory for on-demand instance creation
+async def create_service(config: str) -> AsyncDatabase:
+    db = AsyncDatabase(config)
+    await db.connect()
+    return db
+
+module = ModuleDef()
+module.make(Factory[AsyncDatabase]).using().factory_func(create_service)
+
+async def use_factory():
+    injector = Injector()
+    plan = injector.plan(PlannerInput([module]))
+    async with await injector.produce_async(plan) as locator:
+        factory = locator.get(InstanceKey(Factory[AsyncDatabase]))
+        # Create instances on-demand with async support
+        db1 = await factory.create_async("config1")
+        db2 = await factory.create_async("config2")
+        assert db1.connected and db2.connected
+
+asyncio.run(use_factory())
+```
+
+**Benefits of async support:**
+
+- **Resource safety**: Automatic cleanup with async context managers
+- **Performance**: True async/await support for I/O-bound operations
+- **Flexibility**: Mix sync and async code without restrictions
+- **Error handling**: Cleanup occurs even when exceptions are raised
+- **Type safety**: Full type checking for async functions
 
 ## TODO: Future Features
 

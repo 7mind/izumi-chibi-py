@@ -7,6 +7,7 @@ These functions can be introspected at runtime to discover their dependencies.
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from typing import Any, TypeVar
 
@@ -24,6 +25,7 @@ class Functoid[T]:
     - Takes zero or more arguments and returns T
     - Can be introspected to discover its dependencies via .keys()
     - Can be called with arbitrary arguments via .call()
+    - Can be async, in which case .call() returns a coroutine
     """
 
     def __init__(
@@ -37,6 +39,7 @@ class Functoid[T]:
         original_class: type | None = None,
         original_func: Callable[..., Any] | None = None,
         original_target_type: type | None = None,
+        is_async: bool = False,
     ):
         """
         Create a functoid with the given keys and call functions.
@@ -47,6 +50,7 @@ class Functoid[T]:
             call_fn: Function that performs the actual work when called
             name: Optional name for debugging/display purposes
             original_*: Store original objects for special handling (e.g., dependency resolution)
+            is_async: Whether this functoid's call_fn is async
         """
         self._keys_fn = keys_fn
         self._sig_fn = sig_fn
@@ -56,6 +60,7 @@ class Functoid[T]:
         self.original_class = original_class
         self.original_func = original_func
         self.original_target_type = original_target_type
+        self._is_async = is_async
 
     def keys(self) -> list[InstanceKey]:
         """Return a list of DIKey dependencies that this functoid requires."""
@@ -69,9 +74,14 @@ class Functoid[T]:
         """Call the underlying function with the provided arguments."""
         return self._call_fn(*args, **kwargs)
 
+    def is_async(self) -> bool:
+        """Return whether this functoid is async."""
+        return self._is_async
+
     def __repr__(self) -> str:
         name = self._name or "Functoid"
-        return f"{name}({self._call_fn!r})"
+        async_marker = " (async)" if self._is_async else ""
+        return f"{name}({self._call_fn!r}){async_marker}"
 
 
 # Factory functions for creating functoids
@@ -90,12 +100,16 @@ def class_functoid[T](cls: type[T]) -> Functoid[T]:
     """Create a functoid that instantiates a class."""
     dependencies = SignatureIntrospector.extract_from_class(cls)
 
+    # Check if __init__ is async (rare but possible)
+    is_async = inspect.iscoroutinefunction(cls.__init__)
+
     return Functoid(
         keys_fn=lambda: SignatureIntrospector.get_binding_keys(dependencies),
         sig_fn=lambda: dependencies,
         call_fn=lambda *args, **kwargs: cls(*args, **kwargs),
         name=f"ClassFunctoid({cls.__name__})",
         original_class=cls,
+        is_async=is_async,
     )
 
 
@@ -103,12 +117,16 @@ def function_functoid[T](func: Callable[..., T]) -> Functoid[T]:
     """Create a functoid that calls a function."""
     dependencies = SignatureIntrospector.extract_from_callable(func)
 
+    # Check if the function is async
+    is_async = inspect.iscoroutinefunction(func)
+
     return Functoid(
         keys_fn=lambda: SignatureIntrospector.get_binding_keys(dependencies),
         sig_fn=lambda: dependencies,
         call_fn=func,
         name=f"FunctionFunctoid({func.__name__})",
         original_func=func,
+        is_async=is_async,
     )
 
 
@@ -124,6 +142,7 @@ def set_element_functoid[T](inner_functoid: Functoid[T]) -> Functoid[T]:
         original_class=inner_functoid.original_class,
         original_func=inner_functoid.original_func,
         original_target_type=inner_functoid.original_target_type,
+        is_async=inner_functoid.is_async(),
     )
 
 
@@ -135,10 +154,14 @@ def lifecycle_functoid(lifecycle: Any) -> Functoid[Any]:
 
     dependencies = SignatureIntrospector.extract_from_callable(lifecycle.acquire)
 
+    # Check if acquire is async
+    is_async = inspect.iscoroutinefunction(lifecycle.acquire)
+
     return Functoid(  # pyright: ignore[reportUnknownVariableType]
         keys_fn=lambda: SignatureIntrospector.get_binding_keys(dependencies),
         sig_fn=lambda: dependencies,
         call_fn=lifecycle.acquire,
         name=f"LifecycleFunctoid({lifecycle.acquire.__name__})",
         original_func=lifecycle.acquire,
+        is_async=is_async,
     )

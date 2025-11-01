@@ -33,6 +33,10 @@ class ExecutableOp(ABC):
     def execute(self, resolved_deps: dict[InstanceKey, Any]) -> Any:  # noqa: ARG002
         """Execute the operation with resolved dependencies."""
 
+    def is_async(self) -> bool:
+        """Return whether this operation is async. Default is False."""
+        return False
+
 
 @dataclass
 class Provide(ExecutableOp):
@@ -69,7 +73,12 @@ class Provide(ExecutableOp):
                 resolved_args.append(resolved_deps[dep_key])
             # For optional dependencies with defaults, let the functoid handle them
 
+        # Call the functoid - it may return a coroutine if it's async
         return self.binding.functoid.call(*resolved_args)
+
+    def is_async(self) -> bool:
+        """Return whether this operation is async."""
+        return self.binding.functoid.is_async()
 
 
 @dataclass

@@ -15,6 +15,7 @@ from beartype import BeartypeConf, beartype
 from beartype.roar import BeartypeCallHintViolation
 
 from .activation import Activation, AxisChoiceDef, StandardAxis
+from .async_locator import AsyncLocator
 from .dsl import ModuleDef
 from .factory import Factory
 from .functoid import Functoid
@@ -64,6 +65,7 @@ __all__ = [
     "Plan",
     "PlannerInput",
     "Locator",
+    "AsyncLocator",
     "Tag",
     "Binding",
     "DependencyGraph",
