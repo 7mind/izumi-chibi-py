@@ -3,6 +3,7 @@
 Unit tests for named dependency injection using Id annotations.
 """
 
+import logging
 import unittest
 from dataclasses import dataclass
 from typing import Annotated
@@ -30,6 +31,36 @@ class TestNamedDependencies(unittest.TestCase):
         self.assertNotEqual(id1, id3)
         self.assertEqual(hash(id1), hash(id2))
         self.assertNotEqual(hash(id1), hash(id3))
+
+    def test_signature_introspector_preserves_annotated_metadata(self):
+        """
+        Test that SignatureIntrospector correctly preserves Annotated metadata.
+        This verifies the fix for get_type_hints() needing include_extras=True.
+        """
+        from izumi.distage.introspection import SignatureIntrospector
+
+        def test_func(
+            regular_logger: logging.Logger,
+            named_logger: Annotated[logging.Logger, Id("my-named-logger")],
+        ):
+            pass
+
+        deps = SignatureIntrospector.extract_from_callable(test_func)
+
+        # Should extract two dependencies
+        self.assertEqual(len(deps), 2)
+
+        # First parameter (regular_logger) should have no dependency name
+        regular_dep = deps[0]
+        self.assertEqual(regular_dep.name, "regular_logger")
+        self.assertEqual(regular_dep.type_hint, logging.Logger)
+        self.assertIsNone(regular_dep.dependency_name)
+
+        # Second parameter (named_logger) should preserve the Id annotation
+        named_dep = deps[1]
+        self.assertEqual(named_dep.name, "named_logger")
+        self.assertEqual(named_dep.type_hint, logging.Logger)
+        self.assertEqual(named_dep.dependency_name, "my-named-logger")
 
     def test_named_binding_with_module_def(self):
         """Test creating named bindings using ModuleDef."""

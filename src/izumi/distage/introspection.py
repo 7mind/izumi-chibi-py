@@ -111,8 +111,9 @@ class SignatureIntrospector:
             # Use raw annotations to preserve Annotated metadata
             raw_annotations = getattr(func, "__annotations__", {})
             # Try to get type hints for fallback, but handle forward references gracefully
+            # IMPORTANT: Use include_extras=True to preserve Annotated metadata
             try:
-                resolved_type_hints = get_type_hints(func)
+                resolved_type_hints = get_type_hints(func, include_extras=True)
             except (NameError, AttributeError):
                 # Fall back to raw annotations if type hints fail
                 resolved_type_hints = raw_annotations
@@ -126,16 +127,20 @@ class SignatureIntrospector:
                 continue
 
             # First try raw annotations to preserve Annotated metadata
-            type_hint = raw_annotations.get(param_name, Any)
+            raw_type_hint = raw_annotations.get(param_name, Any)
 
             # Extract dependency name from Annotated types
             type_hint, dependency_name = SignatureIntrospector._extract_name_from_annotated(
-                type_hint
+                raw_type_hint
             )
 
-            # If we didn't get an Annotated type, fall back to resolved type hints
-            if dependency_name is None and param_name in resolved_type_hints:
-                type_hint = resolved_type_hints[param_name]
+            # If we didn't find the annotation in raw annotations, fall back to resolved type hints
+            if raw_type_hint is Any and param_name in resolved_type_hints:
+                resolved_hint = resolved_type_hints[param_name]
+                # Also extract from resolved hints in case they're Annotated
+                type_hint, dependency_name = SignatureIntrospector._extract_name_from_annotated(
+                    resolved_hint
+                )
 
             # Handle string annotations (forward references)
             if isinstance(type_hint, str):
