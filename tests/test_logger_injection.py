@@ -216,7 +216,9 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
         # Should use explicit binding, NOT auto-injection
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithNamedLogger))
+        service = injector.produce(injector.plan(planner_input)).get(
+            DIKey.of(ServiceWithNamedLogger)
+        )
 
         # The explicit binding should be used
         self.assertIs(service.logger, explicit_logger)
@@ -376,7 +378,9 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithAnnotatedLogger))
+        service = injector.produce(injector.plan(planner_input)).get(
+            DIKey.of(ServiceWithAnnotatedLogger)
+        )
 
         # Should use explicit binding
         self.assertIs(service.logger, explicit_logger)
@@ -405,11 +409,15 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
 
         module = ModuleDef()
         module.make(ServiceWithTwoLoggers).using().type(ServiceWithTwoLoggers)
-        module.make(logging.Logger).named("training.episodes").using().value(explicit_episode_logger)
+        module.make(logging.Logger).named("training.episodes").using().value(
+            explicit_episode_logger
+        )
 
         injector = Injector()
         planner_input = PlannerInput([module])
-        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithTwoLoggers))
+        service = injector.produce(injector.plan(planner_input)).get(
+            DIKey.of(ServiceWithTwoLoggers)
+        )
 
         # The named logger should use the explicit binding
         self.assertIs(service.episode_logger, explicit_episode_logger)
@@ -417,8 +425,11 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
 
         # The unnamed logger should be auto-injected and DIFFERENT from the named one
         self.assertIsNotNone(service.logger)
-        self.assertIsNot(service.logger, service.episode_logger,
-                         "Unnamed logger should NOT be the same as named logger with explicit binding")
+        self.assertIsNot(
+            service.logger,
+            service.episode_logger,
+            "Unnamed logger should NOT be the same as named logger with explicit binding",
+        )
         # Auto-injected logger should have a different name
         self.assertNotEqual(service.logger.name, "training.episodes")
 
@@ -446,13 +457,17 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
 
         module = ModuleDef()
         module.make(ServiceWithTwoLoggers).using().type(ServiceWithTwoLoggers)
-        module.make(logging.Logger).named("training.episodes").using().value(explicit_episode_logger)
+        module.make(logging.Logger).named("training.episodes").using().value(
+            explicit_episode_logger
+        )
 
         # Use activation to trigger the filter_bindings_by_activation_traced path
         injector = Injector()
         activation = Activation({"dummy": "test"})  # Add some activation choice
         planner_input = PlannerInput([module], activation=activation)
-        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithTwoLoggers))
+        service = injector.produce(injector.plan(planner_input)).get(
+            DIKey.of(ServiceWithTwoLoggers)
+        )
 
         # The named logger should use the explicit binding
         self.assertIs(service.episode_logger, explicit_episode_logger)
@@ -460,8 +475,11 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
 
         # The unnamed logger should be auto-injected and DIFFERENT
         self.assertIsNotNone(service.logger)
-        self.assertIsNot(service.logger, service.episode_logger,
-                         "With activation: Unnamed logger should NOT be the same as named logger")
+        self.assertIsNot(
+            service.logger,
+            service.episode_logger,
+            "With activation: Unnamed logger should NOT be the same as named logger",
+        )
         # Auto-injected logger should have a different name
         self.assertNotEqual(service.logger.name, "training.episodes")
 

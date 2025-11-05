@@ -435,7 +435,8 @@ class DependencyGraph:
             # For example, logger: Logger should not resolve to logger: Annotated[Logger, Id("name")]
             if alternatives:
                 alternatives = [
-                    binding for binding in alternatives
+                    binding
+                    for binding in alternatives
                     if isinstance(binding.key, InstanceKey) and binding.key.name == key.name
                 ]
 
