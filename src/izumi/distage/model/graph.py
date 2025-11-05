@@ -430,6 +430,15 @@ class DependencyGraph:
             # Get alternative bindings for this type
             alternatives = self._alternative_bindings.get(type_key, [])
 
+            # IMPORTANT: Filter alternatives to only include bindings that match the requested key's name
+            # This ensures that unnamed dependencies don't get resolved to named bindings
+            # For example, logger: Logger should not resolve to logger: Annotated[Logger, Id("name")]
+            if alternatives:
+                alternatives = [
+                    binding for binding in alternatives
+                    if isinstance(binding.key, InstanceKey) and binding.key.name == key.name
+                ]
+
             if not alternatives:
                 # No alternatives, check if we have a direct binding
                 if key in self._bindings:
@@ -440,12 +449,8 @@ class DependencyGraph:
             best_binding = self._select_best_binding_traced(alternatives, current_context)
 
             if best_binding:
-                # Store the selected binding for the untagged type key
-                selected_bindings[type_key] = best_binding
-                # Also store for the binding's actual key if it's different from type_key
-                # (e.g., if it has a name)
-                if isinstance(best_binding.key, InstanceKey) and best_binding.key != type_key:
-                    selected_bindings[best_binding.key] = best_binding
+                # Store the selected binding under the requested key
+                selected_bindings[key] = best_binding
 
                 # Extend context with tags from selected binding
                 extended_context = current_context.with_binding_tags(best_binding)

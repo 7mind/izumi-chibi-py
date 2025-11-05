@@ -196,6 +196,32 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
         self.assertIs(service.logger, explicit_logger)
         self.assertEqual(service.logger.name, "explicit-logger")
 
+    def test_named_logger_with_explicit_binding(self):
+        """Test that explicit bindings for named loggers are respected (not auto-injected)."""
+        from typing import Annotated
+
+        from izumi.distage import Id
+
+        class ServiceWithNamedLogger:
+            def __init__(self, logger: Annotated[logging.Logger, Id("my-logger")]):
+                self.logger = logger
+
+        # Create explicit binding for the named logger
+        explicit_logger = logging.getLogger("explicit-named-logger")
+
+        module = ModuleDef()
+        module.make(ServiceWithNamedLogger).using().type(ServiceWithNamedLogger)
+        module.make(logging.Logger).named("my-logger").using().value(explicit_logger)
+
+        # Should use explicit binding, NOT auto-injection
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithNamedLogger))
+
+        # The explicit binding should be used
+        self.assertIs(service.logger, explicit_logger)
+        self.assertEqual(service.logger.name, "explicit-named-logger")
+
     def test_automatic_logger_injection_in_factory(self):
         """Test automatic logger injection in factory functions."""
 
@@ -308,6 +334,136 @@ class TestAutomaticLoggerInjection(unittest.TestCase):
 
         self.assertIsInstance(result, str)
         self.assertIn("Business logic executed with logger:", result)
+
+    def test_produce_run_named_logger_with_explicit_binding(self):
+        """Test that produce_run respects explicit bindings for named loggers."""
+        from typing import Annotated
+
+        from izumi.distage import Id
+
+        def business_logic(logger: Annotated[logging.Logger, Id("my-logger")]) -> str:
+            logger.info("Running business logic")
+            return f"Logger name: {logger.name}"
+
+        # Create explicit binding for the named logger
+        explicit_logger = logging.getLogger("explicit-named-logger-for-run")
+
+        module = ModuleDef()
+        module.make(logging.Logger).named("my-logger").using().value(explicit_logger)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        result = injector.produce_run(planner_input, business_logic)
+
+        # Should use the explicit binding, not auto-inject
+        self.assertIsInstance(result, str)
+        self.assertIn("explicit-named-logger-for-run", result)
+
+    def test_annotated_logger_without_id_with_explicit_binding(self):
+        """Test that Annotated[Logger, ...] (without Id) with explicit binding uses the binding."""
+        from typing import Annotated
+
+        class ServiceWithAnnotatedLogger:
+            def __init__(self, logger: Annotated[logging.Logger, "some-metadata"]):
+                self.logger = logger
+
+        # Create explicit binding for unnamed logger
+        explicit_logger = logging.getLogger("explicit-unnamed-logger")
+
+        module = ModuleDef()
+        module.make(ServiceWithAnnotatedLogger).using().type(ServiceWithAnnotatedLogger)
+        module.make(logging.Logger).using().value(explicit_logger)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithAnnotatedLogger))
+
+        # Should use explicit binding
+        self.assertIs(service.logger, explicit_logger)
+        self.assertEqual(service.logger.name, "explicit-unnamed-logger")
+
+    def test_unnamed_and_named_logger_separation(self):
+        """
+        Test that unnamed logger gets auto-injected while named logger uses explicit binding.
+        This is the critical test for the reported bug.
+        """
+        from typing import Annotated
+
+        from izumi.distage import Id
+
+        class ServiceWithTwoLoggers:
+            def __init__(
+                self,
+                logger: logging.Logger,
+                episode_logger: Annotated[logging.Logger, Id("training.episodes")],
+            ):
+                self.logger = logger
+                self.episode_logger = episode_logger
+
+        # Create explicit binding ONLY for the named logger
+        explicit_episode_logger = logging.getLogger("training.episodes")
+
+        module = ModuleDef()
+        module.make(ServiceWithTwoLoggers).using().type(ServiceWithTwoLoggers)
+        module.make(logging.Logger).named("training.episodes").using().value(explicit_episode_logger)
+
+        injector = Injector()
+        planner_input = PlannerInput([module])
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithTwoLoggers))
+
+        # The named logger should use the explicit binding
+        self.assertIs(service.episode_logger, explicit_episode_logger)
+        self.assertEqual(service.episode_logger.name, "training.episodes")
+
+        # The unnamed logger should be auto-injected and DIFFERENT from the named one
+        self.assertIsNotNone(service.logger)
+        self.assertIsNot(service.logger, service.episode_logger,
+                         "Unnamed logger should NOT be the same as named logger with explicit binding")
+        # Auto-injected logger should have a different name
+        self.assertNotEqual(service.logger.name, "training.episodes")
+
+    def test_unnamed_and_named_logger_separation_with_activation(self):
+        """
+        Test unnamed vs named logger with activation enabled.
+        This tests if the bug appears when activation filtering is used.
+        """
+        from typing import Annotated
+
+        from izumi.distage import Id
+        from izumi.distage.activation import Activation
+
+        class ServiceWithTwoLoggers:
+            def __init__(
+                self,
+                logger: logging.Logger,
+                episode_logger: Annotated[logging.Logger, Id("training.episodes")],
+            ):
+                self.logger = logger
+                self.episode_logger = episode_logger
+
+        # Create explicit binding ONLY for the named logger
+        explicit_episode_logger = logging.getLogger("training.episodes")
+
+        module = ModuleDef()
+        module.make(ServiceWithTwoLoggers).using().type(ServiceWithTwoLoggers)
+        module.make(logging.Logger).named("training.episodes").using().value(explicit_episode_logger)
+
+        # Use activation to trigger the filter_bindings_by_activation_traced path
+        injector = Injector()
+        activation = Activation({"dummy": "test"})  # Add some activation choice
+        planner_input = PlannerInput([module], activation=activation)
+        service = injector.produce(injector.plan(planner_input)).get(DIKey.of(ServiceWithTwoLoggers))
+
+        # The named logger should use the explicit binding
+        self.assertIs(service.episode_logger, explicit_episode_logger)
+        self.assertEqual(service.episode_logger.name, "training.episodes")
+
+        # The unnamed logger should be auto-injected and DIFFERENT
+        self.assertIsNotNone(service.logger)
+        self.assertIsNot(service.logger, service.episode_logger,
+                         "With activation: Unnamed logger should NOT be the same as named logger")
+        # Auto-injected logger should have a different name
+        self.assertNotEqual(service.logger.name, "training.episodes")
 
 
 if __name__ == "__main__":
