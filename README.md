@@ -13,6 +13,8 @@ The port was done by guiding Claude with thorough manual reviews.
 At this point the project is not battle-tested. Expect dragons, landmines and varying mileage.
 Currently it powers just a couple of small private tools.
 
+Sibling project: [izumi-chibi-ts](https://github.com/7mind/izumi-chibi-ts).
+
 ## Comparison with Other Python DI Libraries
 
 This comparsion is completely subjective.
