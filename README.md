@@ -15,6 +15,8 @@ Currently it powers just a couple of small private tools.
 
 ## Comparison with Other Python DI Libraries
 
+This comparsion is completely subjective.
+
 | Library | Non-invasive | Staged DI | Config Axes | Subcontexts | Async | Lifecycle | Factory | Type Safety |
 |---------|--------------|-----------|-------------|-------------|-------|-----------|---------|-------------|
 | **chibi-izumi** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
